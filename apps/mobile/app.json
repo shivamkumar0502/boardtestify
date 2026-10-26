@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "BoardTestify",
+    "slug": "boardtestify",
+    "scheme": "boardtestify",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "android": {
+      "package": "in.boardtestify.app",
+      "versionCode": 1
+    },
+    "plugins": ["expo-router", "expo-secure-store"]
+  }
+}
