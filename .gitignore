@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.expo/
+coverage/
+test-results/
+*.log
+
+android-export/
+playwright-report/

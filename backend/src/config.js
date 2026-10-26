@@ -1,0 +1,33 @@
+import "dotenv/config";
+import { z } from "zod";
+export const env = z
+  .object({
+    NODE_ENV: z
+      .enum(["development", "test", "production"])
+      .default("development"),
+    PORT: z.coerce.number().default(4000),
+    MONGODB_URI: z.string().min(1),
+    JWT_SECRET: z.string().min(48),
+    WEB_ORIGIN: z.string().url(),
+    AI_BASE_URL: z.string().url().default("https://api.openai.com/v1"),
+    AI_API_KEY: z.string().default(""),
+    AI_MODEL: z.string().default(""),
+    SMTP_URL: z.string().default(""),
+    MAIL_FROM: z.string().default(""),
+    RAZORPAY_KEY_ID: z.string().default(""),
+    RAZORPAY_KEY_SECRET: z.string().default(""),
+    RAZORPAY_WEBHOOK_SECRET: z.string().default(""),
+    PASS_PRICE_PAISE: z.coerce.number().int().positive().default(9900),
+    S3_ENDPOINT: z.string().default(""),
+    S3_REGION: z.string().default("auto"),
+    S3_BUCKET: z.string().default(""),
+    S3_ACCESS_KEY_ID: z.string().default(""),
+    S3_SECRET_ACCESS_KEY: z.string().default(""),
+  })
+  .parse(process.env);
+if (
+  env.NODE_ENV === "production" &&
+  (!env.WEB_ORIGIN.startsWith("https://") ||
+    env.JWT_SECRET.includes("replace-with"))
+)
+  throw Error("Production requires HTTPS origin and a random JWT secret");
