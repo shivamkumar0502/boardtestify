@@ -62,7 +62,7 @@ app.get("/api/health", (_req, res) =>
 );
 app.use("/api/auth", authRouter);
 app.use("/api", integrations, content, attempts);
-const webDist = fileURLToPath(new URL("../../web/dist/", import.meta.url));
+const webDist = fileURLToPath(new URL("../../frontend/dist/", import.meta.url));
 app.use(express.static(webDist));
 app.get("/{*path}", (req, res, next) => {
   if (req.path.startsWith("/api/")) return next();
@@ -103,15 +103,13 @@ app.use((err, req, res, _next) => {
       { err, requestId: res.getHeader("X-Request-ID"), path: req.path },
       "Request failed",
     );
-  res
-    .status(status)
-    .json({
-      message,
-      details:
-        err instanceof ZodError
-          ? err.flatten()
-          : err instanceof HttpError
-            ? err.details
-            : undefined,
-    });
+  res.status(status).json({
+    message,
+    details:
+      err instanceof ZodError
+        ? err.flatten()
+        : err instanceof HttpError
+          ? err.details
+          : undefined,
+  });
 });

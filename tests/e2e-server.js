@@ -9,7 +9,7 @@ const mongo = await MongoMemoryServer.create({
   instance: { args: ["--nounixsocket"] },
 });
 process.env.MONGODB_URI = mongo.getUri();
-const seed = spawn(process.execPath, ["apps/api/src/manage.js", "seed"], {
+const seed = spawn(process.execPath, ["backend/src/manage.js", "seed"], {
   stdio: "inherit",
   env: process.env,
 });
@@ -18,9 +18,9 @@ const seedExit = await new Promise((resolve, reject) => {
   seed.once("exit", resolve);
 });
 if (seedExit) process.exit(seedExit);
-const { connect } = await import("../apps/api/src/models.js");
+const { connect } = await import("../backend/src/models.js");
 await connect(process.env.MONGODB_URI);
-const { app } = await import("../apps/api/src/app.js");
+const { app } = await import("../backend/src/app.js");
 const server = app.listen(4173, "127.0.0.1");
 process.on("SIGTERM", () =>
   server.close(async () => {

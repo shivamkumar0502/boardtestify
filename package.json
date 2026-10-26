@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "apps/*",
+    "frontend",
+    "backend",
+    "app",
     "packages/*"
   ],
   "engines": {
@@ -17,7 +19,10 @@
     "seed": "npm run seed -w @boardtestify/api",
     "admin": "npm run admin -w @boardtestify/api",
     "check": "node scripts/check.mjs",
-    "test:e2e": "npm run build && playwright test"
+    "test:e2e": "npm run build && playwright test",
+    "dev:frontend": "npm run dev -w @boardtestify/web",
+    "dev:backend": "npm run dev -w @boardtestify/api",
+    "dev:app": "npm run dev -w @boardtestify/mobile"
   },
   "devDependencies": {
     "@playwright/test": "1.56.1",

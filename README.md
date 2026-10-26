@@ -32,11 +32,15 @@ The password must contain 12+ characters. No default administrator credentials e
 
 ## Workspace
 
+The three applications are in separate top-level folders: `frontend/` for the React website, `backend/` for the Node.js API, and `app/` for the Android application. Install dependencies from the repository root with `npm ci`; shared validation and API code stays in `packages/`.
+
+Run each application from the root with `npm run dev:frontend`, `npm run dev:backend`, or `npm run dev:app`. `npm run dev` starts the website and API together.
+
 | Path                  | Responsibility                                                                                |
 | --------------------- | --------------------------------------------------------------------------------------------- |
-| `apps/web`            | React/Vite, React Router, Tailwind, student dashboard, CBT, results and administration        |
-| `apps/api`            | Express REST API, auth, RBAC, content, attempt persistence, evaluation queue and integrations |
-| `apps/mobile`         | Native Expo Router student app, secure refresh tokens, exam and result screens                |
+| `frontend`            | React/Vite, React Router, Tailwind, student dashboard, CBT, results and administration        |
+| `backend`             | Express REST API, auth, RBAC, content, attempt persistence, evaluation queue and integrations |
+| `app`                 | Native Expo Router student app, secure refresh tokens, exam and result screens                |
 | `packages/domain`     | Shared Zod validation, question states, scoring and AI evaluation arithmetic                  |
 | `packages/api-client` | Shared HTTP client and error type                                                             |
 | `tests`               | Unit, MongoDB-backed API integration and browser tests                                        |
@@ -57,7 +61,7 @@ No application source uses TypeScript. Type packages appearing in the lockfile a
 
 ## Android development
 
-Set `EXPO_PUBLIC_API_URL` to an API address accessible to the device. An Android emulator can use `http://10.0.2.2:4000/api`; a physical device needs your computer's LAN address or an HTTPS server. Run from `apps/mobile`:
+Set `EXPO_PUBLIC_API_URL` to an API address accessible to the device. An Android emulator can use `http://10.0.2.2:4000/api`; a physical device needs your computer's LAN address or an HTTPS server. Run from `app`:
 
 ```bash
 npm run dev

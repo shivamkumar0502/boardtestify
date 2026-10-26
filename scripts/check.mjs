@@ -12,7 +12,14 @@ function walk(dir) {
           : [],
     );
 }
-const files = ["apps", "packages", "tests", "scripts"].flatMap(walk);
+const files = [
+  "frontend",
+  "backend",
+  "app",
+  "packages",
+  "tests",
+  "scripts",
+].flatMap(walk);
 if (files.some((f) => /\.tsx?$/.test(f)))
   throw Error("Project source must use JavaScript/JSX only");
 for (const file of files.filter((f) => /\.[cm]?js$/.test(f))) {

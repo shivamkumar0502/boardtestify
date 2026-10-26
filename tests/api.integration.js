@@ -16,7 +16,7 @@ before(async () => {
     });
     process.env.MONGODB_URI = mongo.getUri();
   }
-  models = await import("../apps/api/src/models.js");
+  models = await import("../backend/src/models.js");
   await models.connect(process.env.MONGODB_URI);
   await mongoose.connection.dropDatabase();
   await Promise.all(
@@ -24,7 +24,7 @@ before(async () => {
       (m) => m.createIndexes(),
     ),
   );
-  const { app } = await import("../apps/api/src/app.js");
+  const { app } = await import("../backend/src/app.js");
   server = app.listen(0, "127.0.0.1");
   await new Promise((r) => server.on("listening", r));
   base = `http://127.0.0.1:${server.address().port}/api`;
@@ -84,7 +84,7 @@ test("persistent authentication, publication, CBT conflict/timer, scoring and re
     classLevel: "10",
     stream: "GENERAL",
   });
-  const { accessToken } = await import("../apps/api/src/lib.js");
+  const { accessToken } = await import("../backend/src/lib.js");
   const adminToken = accessToken(admin);
   const subject = await models.Academic.create({
     kind: "SUBJECT",
@@ -256,7 +256,7 @@ test("persistent authentication, publication, CBT conflict/timer, scoring and re
   assert.equal(result.data.awardedMarks, 1);
   assert.equal(result.data.maximumMarks, 4);
   assert.equal(result.data.provisional, true);
-  const { tick } = await import("../apps/api/src/attempts.js");
+  const { tick } = await import("../backend/src/attempts.js");
   await tick();
   const record = await models.Attempt.findById(aid);
   assert.equal(record.evaluations[did].status, "REVIEW");
@@ -294,7 +294,7 @@ test("persistent authentication, publication, CBT conflict/timer, scoring and re
   );
   assert.equal((await call("/analytics", undefined, token)).data.completed, 2);
   // Payment replay/signature handling is independent from frontend checkout success.
-  const { validHmac } = await import("../apps/api/src/integrations.js");
+  const { validHmac } = await import("../backend/src/integrations.js");
   assert.equal(validHmac("{}", "forged", "secret"), false);
   assert.equal(
     (

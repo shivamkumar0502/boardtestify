@@ -3,10 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --watch --env-file-if-exists=../../.env src/server.js",
-    "start": "node --env-file-if-exists=../../.env src/server.js",
-    "seed": "node --env-file-if-exists=../../.env src/manage.js seed",
-    "admin": "node --env-file-if-exists=../../.env src/manage.js admin"
+    "dev": "node --watch --env-file-if-exists=../.env src/server.js",
+    "start": "node --env-file-if-exists=../.env src/server.js",
+    "seed": "node --env-file-if-exists=../.env src/manage.js seed",
+    "admin": "node --env-file-if-exists=../.env src/manage.js admin"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.840.0",

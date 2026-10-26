@@ -44,4 +44,4 @@ Rate limiting currently uses process memory. Run one API instance or replace it 
 
 ## Android
 
-Set the HTTPS `EXPO_PUBLIC_API_URL` in the EAS build environment. From `apps/mobile`, use `eas build --platform android --profile production` after signing into your own Expo account and configuring Android signing. A successful JS bundle export is not a signed `.aab` or device certification. Test low-resolution devices, reconnects, background/resume, Hindi input, token expiry and timer behavior before Play Store release.
+Set the HTTPS `EXPO_PUBLIC_API_URL` in the EAS build environment. From `app`, use `eas build --platform android --profile production` after signing into your own Expo account and configuring Android signing. A successful JS bundle export is not a signed `.aab` or device certification. Test low-resolution devices, reconnects, background/resume, Hindi input, token expiry and timer behavior before Play Store release.

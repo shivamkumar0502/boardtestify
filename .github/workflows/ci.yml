@@ -32,5 +32,5 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: npx expo export --platform android --output-dir ../../android-export
-        working-directory: apps/mobile
+      - run: npx expo export --platform android --output-dir ../android-export
+        working-directory: app
