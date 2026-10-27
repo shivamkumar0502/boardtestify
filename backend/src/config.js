@@ -23,6 +23,22 @@ export const env = z
     S3_BUCKET: z.string().default(""),
     S3_ACCESS_KEY_ID: z.string().default(""),
     S3_SECRET_ACCESS_KEY: z.string().default(""),
+    DB_POOL_MAX: z.coerce.number().int().min(5).max(200).default(30),
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
+    API_CONCURRENCY: z.coerce.number().int().min(10).max(1000).default(150),
+    WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(2),
+    RUN_WORKER: z.enum(["true", "false"]).default("true"),
+    AI_VISION_ENABLED: z.enum(["true", "false"]).default("false"),
+    OCR_API_KEY: z.string().default(""),
+    TWILIO_ACCOUNT_SID: z.string().default(""),
+    TWILIO_AUTH_TOKEN: z.string().default(""),
+    TWILIO_VERIFY_SERVICE_SID: z.string().default(""),
+    ATTACHMENT_RETENTION_DAYS: z.coerce
+      .number()
+      .int()
+      .min(7)
+      .max(730)
+      .default(90),
   })
   .parse(process.env);
 if (

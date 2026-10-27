@@ -18,8 +18,31 @@ const seedExit = await new Promise((resolve, reject) => {
   seed.once("exit", resolve);
 });
 if (seedExit) process.exit(seedExit);
-const { connect } = await import("../backend/src/models.js");
+const { connect, User } = await import("../backend/src/models.js");
 await connect(process.env.MONGODB_URI);
+const bcrypt = await import("bcryptjs");
+const passwordHash = await bcrypt.default.hash(
+  "Fixture-admin-password-123",
+  10,
+);
+await User.create([
+  {
+    name: "Fixture Author",
+    email: "author@fixture.example",
+    passwordHash,
+    role: "ADMIN",
+    classLevel: "10",
+    stream: "GENERAL",
+  },
+  {
+    name: "Fixture Reviewer",
+    email: "reviewer@fixture.example",
+    passwordHash,
+    role: "ADMIN",
+    classLevel: "10",
+    stream: "GENERAL",
+  },
+]);
 const { app } = await import("../backend/src/app.js");
 const server = app.listen(4173, "127.0.0.1");
 process.on("SIGTERM", () =>

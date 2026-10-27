@@ -1,7 +1,11 @@
+import { tr, useLanguage } from "@boardtestify/i18n";
 import { useState } from "react";
 import { Plus, Shield, Upload, Check, Copy, Sparkles } from "lucide-react";
 import { request } from "./api";
 import { useLoad, useApp, Notice, Empty } from "./main";
+import { QuestionForm, TestForm } from "./authoring";
+import { ManagementPanel } from "./management-ui";
+import { AttachmentGallery } from "./test";
 const sampleQuestion = {
   academic: {
     session: "2026-27",
@@ -13,8 +17,14 @@ const sampleQuestion = {
   language: "en",
   text: "Enter the question",
   options: [
-    { id: "a", text: "Option A" },
-    { id: "b", text: "Option B" },
+    {
+      id: "a",
+      text: "Option A",
+    },
+    {
+      id: "b",
+      text: "Option B",
+    },
   ],
   correct: ["a"],
   referenceAnswer: "",
@@ -28,6 +38,7 @@ const sampleQuestion = {
   rubric: [],
 };
 export function Admin() {
+  useLanguage();
   const { user } = useApp();
   const tabs =
     user.role === "EVALUATOR"
@@ -38,8 +49,9 @@ export function Admin() {
           "Academics",
           "Import",
           "AI drafts",
+          "Patterns",
           ...(["ADMIN", "SUPER_ADMIN"].includes(user.role)
-            ? ["Reviews", "Users"]
+            ? ["Reviews", "Users", "Announcements", "Plans", "Operations"]
             : []),
           ...(user.role === "SUPER_ADMIN" ? ["Audit"] : []),
         ];
@@ -47,30 +59,34 @@ export function Admin() {
   return (
     <>
       <div className="page-heading">
-        <span className="eyebrow">CONTENT WITH CARE</span>
+        <span className="eyebrow">{tr("CONTENT WITH CARE")}</span>
         <h1>
-          Administration<span className="accent">.</span>
+          {tr("Administration")}
+          <span className="accent">{tr(".")}</span>
         </h1>
         <p>
-          Create, verify and publish. Every official pattern needs an
-          attributable source.
+          {tr(
+            "Create, verify and publish. Every official pattern needs an attributable source.",
+          )}
         </p>
       </div>
       <div className="tabs admin-tabs">
-        {tabs.map((t) => (
-          <button
-            className={tab === t ? "active" : ""}
-            onClick={() => setTab(t)}
-            key={t}
-          >
-            {t}
-          </button>
-        ))}
+        {tr(
+          tabs.map((t) => (
+            <button
+              className={tab === t ? "active" : ""}
+              onClick={() => setTab(t)}
+              key={t}
+            >
+              {tr(t)}
+            </button>
+          )),
+        )}
       </div>
       {tab === "Questions" ? (
-        <ContentEditor kind="questions" />
+        <ContentEditor key="questions" kind="questions" />
       ) : tab === "Tests" ? (
-        <ContentEditor kind="tests" />
+        <ContentEditor key="tests" kind="tests" />
       ) : tab === "Academics" ? (
         <Academics />
       ) : tab === "Import" ? (
@@ -81,6 +97,8 @@ export function Admin() {
         <Reviews />
       ) : tab === "Users" ? (
         <Users />
+      ) : ["Patterns", "Announcements", "Plans", "Operations"].includes(tab) ? (
+        <ManagementPanel section={tab} />
       ) : (
         <Audit />
       )}
@@ -88,7 +106,12 @@ export function Admin() {
   );
 }
 function ContentEditor({ kind }) {
-  const { data, error, reload } = useLoad(`/admin/${kind}`);
+  useLanguage();
+  const [page, setPage] = useState(1);
+  const { data, error, reload } = useLoad(
+    `/admin/${kind}${kind === "questions" ? `?page=${page}` : ""}`,
+  );
+  const [advanced, setAdvanced] = useState(false);
   const [editing, setEditing] = useState(null),
     [json, setJSON] = useState(""),
     [msg, setMsg] = useState(""),
@@ -115,7 +138,7 @@ function ContentEditor({ kind }) {
                   id: "section-1",
                   title: "Section A",
                   instructions: "",
-                  questionIds: ["REPLACE_WITH_PUBLISHED_QUESTION_ID"],
+                  questionIds: [],
                 },
               ],
             },
@@ -160,94 +183,166 @@ function ContentEditor({ kind }) {
       <div className="toolbar">
         <div>
           <h2>
-            {kind === "questions" ? "Question bank" : "Test configurations"}
+            {kind === "questions"
+              ? tr("Question bank")
+              : tr("Test configurations")}
           </h2>
           <p className="small muted">
             {kind === "questions"
-              ? "Published questions need a second administrator’s approval."
-              : "Published tests take immutable snapshots when students start."}
+              ? tr(
+                  "Published questions need a second administrator’s approval.",
+                )
+              : tr(
+                  "Published tests take immutable snapshots when students start.",
+                )}
           </p>
         </div>
         <button className="button primary" onClick={create}>
-          <Plus size={16} /> Create {kind === "questions" ? "question" : "test"}
+          <Plus size={16} />
+          {tr(" Create ")}
+          {kind === "questions" ? tr("question") : tr("test")}
         </button>
       </div>
-      <Notice error>{error || err}</Notice>
-      <Notice>{msg}</Notice>
+      <Notice error>{error || tr(err)}</Notice>
+      <Notice>{tr(msg)}</Notice>
       {editing !== null && (
         <div className="panel editor-panel">
-          <h3>{editing === "new" ? "Create draft" : "Edit draft"}</h3>
+          <h3>{editing === "new" ? tr("Create draft") : tr("Edit draft")}</h3>
           <p className="small muted">
-            Use IDs from Academics and Question bank. Descriptive questions
-            require a reference answer and rubric; rubric maxima must sum to
-            maximumMarks.
+            {tr(
+              "Choose your academic scope and fill the fields. Descriptive rubric marks must equal the question maximum.",
+            )}
           </p>
-          <label>
-            Configuration JSON
-            <textarea
-              className="code-editor"
-              value={json}
-              onChange={(e) => setJSON(e.target.value)}
-              spellCheck={false}
+          <button
+            className="button ghost"
+            onClick={() => {
+              if (advanced) {
+                try {
+                  JSON.parse(json);
+                } catch {
+                  setErr(
+                    "Fix invalid JSON before switching to the visual editor",
+                  );
+                  return;
+                }
+              }
+              setAdvanced(!advanced);
+            }}
+          >
+            {advanced ? tr("Use visual editor") : tr("Advanced JSON editor")}
+          </button>
+          {advanced ? (
+            <label>
+              {tr("Configuration JSON")}
+              <textarea
+                className="code-editor"
+                value={json}
+                onChange={(e) => setJSON(e.target.value)}
+                spellCheck={false}
+              />
+            </label>
+          ) : kind === "questions" ? (
+            <QuestionForm
+              value={JSON.parse(json)}
+              onChange={(v) => setJSON(JSON.stringify(v, null, 2))}
             />
-          </label>
+          ) : (
+            <TestForm
+              value={JSON.parse(json)}
+              onChange={(v) => setJSON(JSON.stringify(v, null, 2))}
+            />
+          )}
           <div className="row">
             <button className="button primary" disabled={busy} onClick={save}>
-              {busy ? "Saving…" : "Validate & save draft"}
+              {busy ? tr("Saving…") : tr("Validate & save draft")}
             </button>
             <button className="button ghost" onClick={() => setEditing(null)}>
-              Cancel
+              {tr("Cancel")}
             </button>
           </div>
         </div>
       )}
-      {rows?.map((r) => (
-        <div className="admin-row" key={r._id}>
-          <div>
-            <span className="tag">
-              {r.status} · v{r.version}
-            </span>
-            <h3>{r.data.title || r.data.text}</h3>
-            <button
-              className="text-button muted small"
-              onClick={() =>
-                navigator.clipboard
-                  .writeText(r._id)
-                  .then(() => setMsg("ID copied."))
-                  .catch(() => setMsg(r._id))
-              }
-            >
-              <Copy size={12} /> {r._id}
-            </button>
-          </div>
-          <div className="row">
-            <button
-              className="button ghost"
-              onClick={() => {
-                setEditing(r._id);
-                setJSON(JSON.stringify(r.data, null, 2));
-              }}
-            >
-              Edit
-            </button>
-            {r.status !== "PUBLISHED" && (
-              <button className="button subtle" onClick={() => publish(r._id)}>
-                <Check size={15} /> Approve & publish
+      {tr(
+        rows?.map((r) => (
+          <div className="admin-row" key={r._id}>
+            <div>
+              <span className="tag">
+                {tr(r.status)}
+                {tr(" \xB7 v")}
+                {tr(r.version)}
+              </span>
+              <h3>{r.data.title || tr(r.data.text)}</h3>
+              <button
+                className="text-button muted small"
+                onClick={() =>
+                  navigator.clipboard
+                    .writeText(r._id)
+                    .then(() => setMsg("ID copied."))
+                    .catch(() => setMsg(r._id))
+                }
+              >
+                <Copy size={12} /> {tr(r._id)}
               </button>
-            )}
+            </div>
+            <div className="row">
+              <button
+                className="button ghost"
+                onClick={() => {
+                  setEditing(r._id);
+                  setJSON(JSON.stringify(r.data, null, 2));
+                }}
+              >
+                {tr("Edit")}
+              </button>
+              {r.status !== "PUBLISHED" && (
+                <button
+                  className="button subtle"
+                  onClick={() => publish(r._id)}
+                >
+                  <Check size={15} />
+                  {tr(" Approve & publish")}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        )),
+      )}
       {rows?.length === 0 && (
         <Empty
           title="Start building your content library"
           detail="Create drafts, review source material and publish when ready."
         />
       )}
+      {kind === "questions" && data && (
+        <div className="toolbar">
+          <button
+            className="button ghost"
+            disabled={page === 1}
+            onClick={() => setPage(page - 1)}
+          >
+            {tr("Previous page")}
+          </button>
+          <span className="small muted">
+            {tr("Page ")}
+            {tr(page)}
+            {tr(" \xB7 ")}
+            {tr(data.total)}
+            {tr(" questions")}
+          </span>
+          <button
+            className="button ghost"
+            disabled={page * 25 >= data.total}
+            onClick={() => setPage(page + 1)}
+          >
+            {tr("Next page")}
+          </button>
+        </div>
+      )}
     </>
   );
 }
 function Academics() {
+  useLanguage();
   const { data, error, reload } = useLoad("/admin/academics");
   const [msg, setMsg] = useState(""),
     [err, setErr] = useState(""),
@@ -273,11 +368,44 @@ function Academics() {
       setBusy(false);
     }
   }
+  async function verifyAcademic(r) {
+    try {
+      await request(`/admin/academics/${r._id}/verify`, {});
+      reload();
+      setErr("");
+    } catch (e) {
+      setErr(e.message);
+    }
+  }
+  async function editAcademic(r) {
+    const name = window.prompt(tr("Academic name"), r.name);
+    if (name === null) return;
+    const order = window.prompt(tr("Display order"), String(r.order));
+    if (order === null) return;
+    const sourceUrl = window.prompt(
+      tr("Syllabus source URL"),
+      r.sourceUrl || "",
+    );
+    if (sourceUrl === null) return;
+    try {
+      await request(
+        `/admin/academics/${r._id}`,
+        { name, order: Number(order), ...(sourceUrl ? { sourceUrl } : {}) },
+        "PATCH",
+      );
+      reload();
+      setErr("");
+    } catch (e) {
+      setErr(e.message);
+    }
+  }
   async function toggle(r) {
     try {
       await request(
         `/admin/academics/${r._id}`,
-        { active: !r.active },
+        {
+          active: !r.active,
+        },
         "PATCH",
       );
       reload();
@@ -287,29 +415,30 @@ function Academics() {
   }
   return (
     <>
-      <Notice error>{error || err}</Notice>
-      <Notice>{msg}</Notice>
+      <Notice error>{error || tr(err)}</Notice>
+      <Notice>{tr(msg)}</Notice>
       <form className="panel" onSubmit={submit}>
-        <h2>Academic structure</h2>
+        <h2>{tr("Academic structure")}</h2>
         <p className="muted">
-          BSEB → session → class/stream → subject → chapter → topic. Add only
-          verified syllabus content.
+          {tr(
+            "BSEB \u2192 session \u2192 class/stream \u2192 subject \u2192 chapter \u2192 topic. Add only verified syllabus content.",
+          )}
         </p>
         <div className="grid-three">
           <label>
-            Kind
+            {tr("Kind")}
             <select name="kind">
-              <option>SUBJECT</option>
-              <option>CHAPTER</option>
-              <option>TOPIC</option>
+              <option value="SUBJECT">{tr("SUBJECT")}</option>
+              <option value="CHAPTER">{tr("CHAPTER")}</option>
+              <option value="TOPIC">{tr("TOPIC")}</option>
             </select>
           </label>
           <label>
-            Name
+            {tr("Name")}
             <input name="name" required />
           </label>
           <label>
-            Academic session
+            {tr("Academic session")}
             <input
               name="session"
               pattern="[0-9]{4}-[0-9]{2}"
@@ -318,81 +447,116 @@ function Academics() {
             />
           </label>
           <label>
-            Class
+            {tr("Class")}
             <select name="classLevel">
-              <option value="10">Class 10</option>
-              <option value="12">Class 12</option>
+              <option value="10">{tr("Class 10")}</option>
+              <option value="12">{tr("Class 12")}</option>
             </select>
           </label>
           <label>
-            Stream
+            {tr("Stream")}
             <select name="stream">
-              {["GENERAL", "ARTS", "SCIENCE", "COMMERCE"].map((x) => (
-                <option key={x}>{x}</option>
-              ))}
+              {tr(
+                ["GENERAL", "ARTS", "SCIENCE", "COMMERCE"].map((x) => (
+                  <option key={x} value={x}>
+                    {tr(x)}
+                  </option>
+                )),
+              )}
             </select>
           </label>
           <label>
-            Parent (chapter/topic only)
+            {tr("Parent (chapter/topic only)")}
             <select name="parentId">
-              <option value="">No parent · subject</option>
-              {data?.map((r) => (
-                <option key={r._id} value={r._id}>
-                  {r.name} · {r.kind} · {r.stream}
-                </option>
-              ))}
+              <option value="">{tr("No parent \xB7 subject")}</option>
+              {tr(
+                data?.map((r) => (
+                  <option key={r._id} value={r._id}>
+                    {tr(r.name)}
+                    {tr(" \xB7 ")}
+                    {tr(r.kind)}
+                    {tr(" \xB7 ")}
+                    {tr(r.stream)}
+                  </option>
+                )),
+              )}
             </select>
           </label>
           <label>
-            Syllabus version
+            {tr("Syllabus version")}
             <input name="syllabusVersion" defaultValue="1" required />
           </label>
           <label>
-            Official syllabus source URL
+            {tr("Official syllabus source URL")}
             <input name="sourceUrl" type="url" />
           </label>
           <label>
-            Display order
+            {tr("Display order")}
             <input type="number" name="order" defaultValue="0" min="0" />
           </label>
         </div>
         <button disabled={busy} className="button primary">
-          <Plus size={16} /> Add record
+          <Plus size={16} />
+          {tr(" Add record")}
         </button>
       </form>
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Name / ID</th>
-              <th>Scope</th>
-              <th>Verification</th>
-              <th>Status</th>
+              <th>{tr("Name / ID")}</th>
+              <th>{tr("Scope")}</th>
+              <th>{tr("Verification")}</th>
+              <th>{tr("Status")}</th>
             </tr>
           </thead>
           <tbody>
-            {data?.map((r) => (
-              <tr key={r._id}>
-                <td>
-                  {r.name}
-                  <small>
-                    {r.kind} · {r._id}
-                  </small>
-                </td>
-                <td>
-                  {r.session} · {r.classLevel} · {r.stream}
-                </td>
-                <td>{r.verified ? "Source recorded" : "Unverified"}</td>
-                <td>
-                  <button
-                    className="button ghost small"
-                    onClick={() => toggle(r)}
-                  >
-                    {r.active ? "Deactivate" : "Activate"}
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {tr(
+              data?.map((r) => (
+                <tr key={r._id}>
+                  <td>
+                    {tr(r.name)}
+                    <small>
+                      {tr(r.kind)}
+                      {tr(" \xB7 ")}
+                      {tr(r._id)}
+                    </small>
+                  </td>
+                  <td>
+                    {tr(r.session)}
+                    {tr(" \xB7 ")}
+                    {tr(r.classLevel)}
+                    {tr(" \xB7 ")}
+                    {tr(r.stream)}
+                  </td>
+                  <td>
+                    {r.verified ? tr("Source recorded") : tr("Unverified")}
+                  </td>
+                  <td>
+                    <button
+                      className="button ghost small"
+                      onClick={() => editAcademic(r)}
+                    >
+                      {tr("Edit")}
+                    </button>
+                    {!r.verified && r.sourceUrl && (
+                      <button
+                        className="button subtle small"
+                        onClick={() => verifyAcademic(r)}
+                      >
+                        {tr("Verify source")}
+                      </button>
+                    )}
+                    <button
+                      className="button ghost small"
+                      onClick={() => toggle(r)}
+                    >
+                      {r.active ? tr("Deactivate") : tr("Activate")}
+                    </button>
+                  </td>
+                </tr>
+              )),
+            )}
           </tbody>
         </table>
       </div>
@@ -400,6 +564,7 @@ function Academics() {
   );
 }
 function Import() {
+  useLanguage();
   const [rows, setRows] = useState([]),
     [err, setErr] = useState(""),
     [msg, setMsg] = useState(""),
@@ -444,11 +609,14 @@ function Import() {
   }
   return (
     <div className="panel">
-      <h2>Import question drafts</h2>
+      <h2>{tr("Import question drafts")}</h2>
       <p className="muted">
-        CSV or XLSX, maximum 100 rows / 2 MB. One column named{" "}
-        <code>question_json</code>, with a full question JSON object in each
-        row. Formula cells are rejected.
+        {tr("CSV or XLSX, maximum 100 rows / 2 MB. One column named")}
+        {tr(" ")}
+        <code>{tr("question_json")}</code>
+        {tr(
+          ", with a full question JSON object in each row. Formula cells are rejected.",
+        )}
       </p>
       <button
         className="button ghost"
@@ -461,7 +629,9 @@ function Import() {
               JSON.stringify(sampleQuestion).replaceAll('"', '""') +
               '"';
             const url = URL.createObjectURL(
-              new Blob([csv], { type: "text/csv" }),
+              new Blob([csv], {
+                type: "text/csv",
+              }),
             );
             const link = document.createElement("a");
             link.href = url;
@@ -473,11 +643,11 @@ function Import() {
           }
         }}
       >
-        Download CSV template
+        {tr("Download CSV template")}
       </button>
       <label className="upload-zone">
         <Upload />
-        <span>{busy ? "Processing…" : "Choose CSV or Excel file"}</span>
+        <span>{busy ? tr("Processing…") : tr("Choose CSV or Excel file")}</span>
         <input
           type="file"
           accept=".csv,.xlsx"
@@ -485,25 +655,33 @@ function Import() {
           onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
         />
       </label>
-      <Notice error>{err}</Notice>
-      {rows.map((r) => (
-        <div className="import-row" key={r.row}>
-          <span>Row {r.row}</span>
-          <span className={r.error ? "accent" : "saved"}>
-            {r.error || r.question.text}
-          </span>
-        </div>
-      ))}
+      <Notice error>{tr(err)}</Notice>
+      {tr(
+        rows.map((r) => (
+          <div className="import-row" key={r.row}>
+            <span>
+              {tr("Row ")}
+              {tr(r.row)}
+            </span>
+            <span className={r.error ? "accent" : "saved"}>
+              {r.error || tr(r.question.text)}
+            </span>
+          </div>
+        )),
+      )}
       {rows.some((r) => !r.error) && (
         <button disabled={busy} className="button primary" onClick={confirm}>
-          Import {rows.filter((r) => !r.error).length} valid drafts
+          {tr("Import ")}
+          {tr(rows.filter((r) => !r.error).length)}
+          {tr(" valid drafts")}
         </button>
       )}
-      {msg && <pre className="panel">{msg}</pre>}
+      {msg && <pre className="panel">{tr(msg)}</pre>}
     </div>
   );
 }
 function Drafts() {
+  useLanguage();
   const [json, setJSON] = useState(
       JSON.stringify(
         {
@@ -544,13 +722,14 @@ function Drafts() {
   }
   return (
     <div className="panel">
-      <h2>AI-assisted question drafts</h2>
+      <h2>{tr("AI-assisted question drafts")}</h2>
       <p className="muted">
-        Set a valid subject ID. Generated content stays unverified and requires
-        review. Your input is preserved if generation fails.
+        {tr(
+          "Set a valid subject ID. Generated content stays unverified and requires review. Your input is preserved if generation fails.",
+        )}
       </p>
       <label>
-        Draft request
+        {tr("Draft request")}
         <textarea
           className="code-editor"
           value={json}
@@ -559,14 +738,14 @@ function Drafts() {
       </label>
       <button className="button primary" disabled={busy} onClick={generate}>
         <Sparkles size={16} />
-        {busy ? "Drafting…" : "Generate drafts"}
+        {busy ? tr("Drafting…") : tr("Generate drafts")}
       </button>
-      <Notice error>{err}</Notice>
-      <Notice>{msg}</Notice>
+      <Notice error>{tr(err)}</Notice>
+      <Notice>{tr(msg)}</Notice>
       {drafts && (
         <>
           <label>
-            Review and edit generated JSON
+            {tr("Review and edit generated JSON")}
             <textarea
               className="code-editor"
               value={JSON.stringify(drafts, null, 2)}
@@ -580,7 +759,7 @@ function Drafts() {
             />
           </label>
           <button className="button subtle" onClick={save}>
-            Save as drafts
+            {tr("Save as drafts")}
           </button>
         </>
       )}
@@ -588,6 +767,7 @@ function Drafts() {
   );
 }
 function Reviews() {
+  useLanguage();
   const { data, error, reload } = useLoad("/reviews");
   const [err, setErr] = useState(""),
     [msg, setMsg] = useState("");
@@ -617,64 +797,77 @@ function Reviews() {
   }
   return (
     <>
-      <Notice error>{error || err}</Notice>
-      <Notice>{msg}</Notice>
-      {data?.map((a) =>
-        a.questions
-          .filter((q) =>
-            ["REVIEW", "PENDING"].includes(a.evaluations[q._id]?.status),
-          )
-          .map((q) => (
-            <form
-              className="panel review-card"
-              key={`${a.id}-${q._id}`}
-              onSubmit={(e) => submit(e, a, q)}
-            >
-              <span className="eyebrow">
-                {a.title} · {a.evaluations[q._id].status}
-              </span>
-              <h3>{q.text}</h3>
-              <div className="answer-block">
-                <small>STUDENT ANSWER</small>
-                <p>{a.answers[q._id]?.value}</p>
-              </div>
-              <div className="answer-block">
-                <small>REFERENCE</small>
-                <p>{q.referenceAnswer}</p>
-              </div>
-              {q.rubric.map((r) => (
-                <div className="grid-two" key={r.id}>
-                  <label>
-                    {r.name} (0–{r.maximumMarks})
-                    <input
-                      name={r.id}
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      max={r.maximumMarks}
-                      defaultValue={
-                        a.evaluations[q._id].criteria?.find(
-                          (c) => c.id === r.id,
-                        )?.awardedMarks ?? 0
-                      }
-                      required
-                    />
-                  </label>
-                  <label>
-                    Feedback
-                    <input name={`feedback-${r.id}`} required />
-                  </label>
+      <Notice error>{error || tr(err)}</Notice>
+      <Notice>{tr(msg)}</Notice>
+      {tr(
+        data?.map((a) =>
+          a.questions
+            .filter((q) =>
+              ["REVIEW", "PENDING"].includes(a.evaluations[q._id]?.status),
+            )
+            .map((q) => (
+              <form
+                className="panel review-card"
+                key={`${a.id}-${q._id}`}
+                onSubmit={(e) => submit(e, a, q)}
+              >
+                <span className="eyebrow">
+                  {tr(a.title)}
+                  {tr(" \xB7 ")}
+                  {tr(a.evaluations[q._id].status)}
+                </span>
+                <h3>{tr(q.text)}</h3>
+                <div className="answer-block">
+                  <small>{tr("STUDENT ANSWER")}</small>
+                  <p>{tr(a.answers[q._id]?.value)}</p>
+                  <AttachmentGallery
+                    ids={a.answers[q._id]?.attachmentIds || []}
+                  />
                 </div>
-              ))}
-              <label>
-                Reason for the review / mark change
-                <textarea name="reason" required minLength={10} />
-              </label>
-              <button className="button primary">
-                <Shield size={15} /> Approve evaluation
-              </button>
-            </form>
-          )),
+                <div className="answer-block">
+                  <small>{tr("REFERENCE")}</small>
+                  <p>{tr(q.referenceAnswer)}</p>
+                </div>
+                {tr(
+                  q.rubric.map((r) => (
+                    <div className="grid-two" key={r.id}>
+                      <label>
+                        {tr(r.name)}
+                        {tr(" (0\u2013")}
+                        {tr(r.maximumMarks)}
+                        {tr(")")}
+                        <input
+                          name={r.id}
+                          type="number"
+                          step={q.scoringStep || 0.5}
+                          min="0"
+                          max={r.maximumMarks}
+                          defaultValue={
+                            a.evaluations[q._id].criteria?.find(
+                              (c) => c.id === r.id,
+                            )?.awardedMarks ?? 0
+                          }
+                          required
+                        />
+                      </label>
+                      <label>
+                        {tr("Feedback")}
+                        <input name={`feedback-${r.id}`} required />
+                      </label>
+                    </div>
+                  )),
+                )}
+                <label>
+                  {tr("Reason for the review / mark change")}
+                  <textarea name="reason" required minLength={10} />
+                </label>
+                <button className="button primary">
+                  <Shield size={15} />
+                  {tr(" Approve evaluation")}
+                </button>
+              </form>
+            )),
+        ),
       )}
       {data?.length === 0 && (
         <Empty
@@ -686,12 +879,19 @@ function Reviews() {
   );
 }
 function Users() {
+  useLanguage();
   const { user } = useApp();
   const { data, error, reload } = useLoad("/admin/users");
   const [err, setErr] = useState("");
   async function update(u, role) {
     try {
-      await request(`/admin/users/${u._id}`, { role }, "PATCH");
+      await request(
+        `/admin/users/${u._id}`,
+        {
+          role,
+        },
+        "PATCH",
+      );
       reload();
     } catch (e) {
       setErr(e.message);
@@ -699,57 +899,73 @@ function Users() {
   }
   return (
     <div className="panel">
-      <h2>Student & staff accounts</h2>
-      <Notice error>{error || err}</Notice>
-      {data?.map((u) => (
-        <div className="admin-row" key={u._id}>
-          <div>
-            <strong>{u.name}</strong>
-            <small>
-              {u.email} · Class {u.classLevel} · {u.stream}
-            </small>
+      <h2>{tr("Student & staff accounts")}</h2>
+      <Notice error>{error || tr(err)}</Notice>
+      {tr(
+        data?.map((u) => (
+          <div className="admin-row" key={u._id}>
+            <div>
+              <strong>{tr(u.name)}</strong>
+              <small>
+                {tr(u.email)}
+                {tr(" \xB7 Class ")}
+                {tr(u.classLevel)}
+                {tr(" \xB7 ")}
+                {tr(u.stream)}
+              </small>
+            </div>
+            {user.role === "SUPER_ADMIN" && u._id !== user.id ? (
+              <select
+                aria-label={tr("Role for {0}", [u.name])}
+                value={u.role}
+                onChange={(e) => update(u, e.target.value)}
+              >
+                {tr(
+                  [
+                    "STUDENT",
+                    "CONTENT_EDITOR",
+                    "EVALUATOR",
+                    "ADMIN",
+                    "SUPER_ADMIN",
+                  ].map((r) => (
+                    <option key={r} value={r}>
+                      {tr(r)}
+                    </option>
+                  )),
+                )}
+              </select>
+            ) : (
+              <span className="tag">{tr(u.role)}</span>
+            )}
           </div>
-          {user.role === "SUPER_ADMIN" && u._id !== user.id ? (
-            <select
-              aria-label={`Role for ${u.name}`}
-              value={u.role}
-              onChange={(e) => update(u, e.target.value)}
-            >
-              {[
-                "STUDENT",
-                "CONTENT_EDITOR",
-                "EVALUATOR",
-                "ADMIN",
-                "SUPER_ADMIN",
-              ].map((r) => (
-                <option key={r}>{r}</option>
-              ))}
-            </select>
-          ) : (
-            <span className="tag">{u.role}</span>
-          )}
-        </div>
-      ))}
+        )),
+      )}
     </div>
   );
 }
 function Audit() {
+  useLanguage();
   const { data, error } = useLoad("/admin/audit");
   return (
     <div className="panel">
-      <h2>Audit log</h2>
-      <Notice error>{error}</Notice>
-      {data?.map((r) => (
-        <div className="admin-row" key={r._id}>
-          <div>
-            <strong>{r.action}</strong>
-            <small>
-              Actor: {r.actor} · Entity: {r.entityId}
-            </small>
+      <h2>{tr("Audit log")}</h2>
+      <Notice error>{tr(error)}</Notice>
+      {tr(
+        data?.map((r) => (
+          <div className="admin-row" key={r._id}>
+            <div>
+              <strong>{tr(r.action)}</strong>
+              <small>
+                {tr("Actor: ")}
+                {tr(r.actor)}
+                {tr(" \xB7 Entity: ")}
+                {tr(r.entityId)}
+              </small>
+            </div>
+            <small>{tr(new Date(r.createdAt).toLocaleString())}</small>
           </div>
-          <small>{new Date(r.createdAt).toLocaleString()}</small>
-        </div>
-      ))}
+        )),
+      )}
     </div>
   );
 }

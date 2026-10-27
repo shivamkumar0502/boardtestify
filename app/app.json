@@ -10,6 +10,17 @@
       "package": "in.boardtestify.app",
       "versionCode": 1
     },
-    "plugins": ["expo-router", "expo-secure-store"]
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow BoardTestify to upload answer-sheet photos.",
+          "cameraPermission": "Allow BoardTestify to photograph handwritten answer pages.",
+          "microphonePermission": false
+        }
+      ]
+    ]
   }
 }

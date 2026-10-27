@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { rateLimit } from "express-rate-limit";
+import { sharedLimit, concurrencyGate } from "./reliability.js";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
@@ -15,11 +15,26 @@ import {
 } from "./lib.js";
 export const authRouter = Router();
 authRouter.use(
-  rateLimit({
+  [
+    "/register",
+    "/login",
+    "/mobile-login",
+    "/forgot-password",
+    "/reset-password",
+  ],
+  sharedLimit({ name: "auth-ip", windowMs: 15 * 60 * 1000, limit: 1000 }),
+  concurrencyGate(8),
+);
+authRouter.use(
+  ["/login", "/mobile-login", "/forgot-password"],
+  sharedLimit({
+    name: "auth-account",
     windowMs: 15 * 60 * 1000,
-    limit: 30,
-    standardHeaders: "draft-8",
-    legacyHeaders: false,
+    limit: 12,
+    key: (req) =>
+      typeof req.body?.email === "string"
+        ? req.body.email.slice(0, 254).toLowerCase()
+        : "invalid",
   }),
 );
 const passwordSchema = z
@@ -38,7 +53,7 @@ const credentials = z.object({
     .transform((s) => s.toLowerCase()),
   password: passwordSchema,
 });
-async function signIn(res, u) {
+export async function signIn(res, u) {
   const token = randomToken();
   await Session.create({
     userId: u._id,
@@ -59,6 +74,7 @@ authRouter.post("/register", async (req, res) => {
   const d = credentials
     .extend({
       name: z.string().trim().min(2).max(100),
+      language: z.enum(["hi", "en"]).default("en"),
       classLevel: z.enum(["10", "12"]),
       stream: z.enum(["GENERAL", "ARTS", "SCIENCE", "COMMERCE"]),
     })
@@ -110,6 +126,38 @@ authRouter.post("/logout", async (req, res) => {
   res.json({ ok: true });
 });
 authRouter.get("/me", auth, (req, res) => res.json(publicUser(req.user)));
+authRouter.patch("/me", auth, async (req, res) => {
+  const d = z
+    .object({
+      name: z.string().trim().min(2).max(100).optional(),
+      classLevel: z.enum(["10", "12"]).optional(),
+      stream: z.enum(["GENERAL", "SCIENCE", "ARTS", "COMMERCE"]).optional(),
+      language: z.enum(["hi", "en"]).optional(),
+    })
+    .strict()
+    .parse(req.body);
+  const level = d.classLevel ?? req.user.classLevel,
+    stream = d.stream ?? req.user.stream;
+  assert(
+    (level === "10") === (stream === "GENERAL"),
+    400,
+    "Select a valid class and stream",
+  );
+  assert(
+    !(await import("./models.js").then((m) =>
+      m.Attempt.exists({ userId: String(req.user._id), status: "ACTIVE" }),
+    )) ||
+      (!d.classLevel && !d.stream),
+    409,
+    "Finish active tests before changing class or stream",
+  );
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { $set: d },
+    { returnDocument: "after" },
+  );
+  res.json(publicUser(user));
+});
 authRouter.post("/mobile-login", async (req, res) => {
   const d = credentials.parse(req.body);
   const u = await User.findOne({ email: d.email });

@@ -22,7 +22,11 @@
     "test:e2e": "npm run build && playwright test",
     "dev:frontend": "npm run dev -w @boardtestify/web",
     "dev:backend": "npm run dev -w @boardtestify/api",
-    "dev:app": "npm run dev -w @boardtestify/mobile"
+    "dev:app": "npm run dev -w @boardtestify/mobile",
+    "worker": "npm run worker -w @boardtestify/api",
+    "migrate": "npm run migrate -w @boardtestify/api",
+    "test:load": "node scripts/load-test.mjs",
+    "calibrate": "node --env-file-if-exists=.env scripts/calibrate.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.56.1",

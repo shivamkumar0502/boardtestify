@@ -26,7 +26,11 @@ test("student registers, starts a persisted test, reloads, and receives a provis
     page.getByRole("heading", { name: /Let’s make progress/ }),
   ).toBeVisible();
   await page.getByRole("link", { name: "Explore tests" }).click();
-  await page.getByRole("button", { name: "Start test" }).click();
+  await page
+    .locator(".test-card")
+    .filter({ hasText: "Getting started · sample practice" })
+    .getByRole("button", { name: "Start test" })
+    .click();
   await expect(
     page.getByRole("heading", { name: "If 2x + 3 = 11, what is x?" }),
   ).toBeVisible();

@@ -8,7 +8,7 @@ export class ApiError extends Error {
   }
 }
 export function createClient(base, token) {
-  return async function request(
+  async function request(
     path,
     body,
     method = body === undefined ? "GET" : "POST",
@@ -30,5 +30,26 @@ export function createClient(base, token) {
         data.details,
       );
     return data;
+  }
+  request.upload = async (path, file, fields = {}) => {
+    const form = new FormData();
+    form.append("file", file);
+    for (const [key, value] of Object.entries(fields))
+      form.append(key, String(value));
+    const res = await fetch(`${base}${path}`, {
+      method: "POST",
+      credentials: "include",
+      headers: token() ? { Authorization: `Bearer ${token()}` } : {},
+      body: form,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok)
+      throw new ApiError(
+        res.status,
+        data.message || "Upload failed",
+        data.details,
+      );
+    return data;
   };
+  return request;
 }
