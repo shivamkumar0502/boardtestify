@@ -2604,3 +2604,32 @@ pre {
     flex-wrap: wrap;
   }
 }
+
+.starter-question {
+  padding: 20px 0;
+  border-bottom: 1px solid #2a2a2a;
+  overflow-wrap: anywhere;
+}
+.starter-question h4 {
+  line-height: 1.65;
+  margin: 14px 0;
+}
+.starter-review .checkbox-label {
+  margin: 22px 0;
+  align-items: flex-start;
+}
+.starter-test-tabs {
+  flex-wrap: wrap;
+}
+.starter-test-tabs button {
+  max-width: 100%;
+  white-space: normal;
+  text-align: left;
+}
+.starter-review > .row {
+  flex-wrap: wrap;
+}
+.starter-callout .button {
+  max-width: 100%;
+  white-space: normal;
+}

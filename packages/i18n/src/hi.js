@@ -1011,4 +1011,36 @@ export default {
   "All modes": "सभी तरीके",
   "Compare selected photo · this device":
     "चुनी फोटो से तुलना करें · इसी डिवाइस पर",
+  "Add actual tests to these subjects": "इन विषयों में वास्तविक टेस्ट जोड़ें",
+  "Add actual tests": "वास्तविक टेस्ट जोड़ें",
+  "Import actual tests & review": "टेस्ट आयात करके समीक्षा करें",
+  "Open starter test review": "स्टार्टर टेस्ट की समीक्षा खोलें",
+  "Review starter tests": "स्टार्टर टेस्ट की समीक्षा",
+  "Review questions, then publish": "प्रश्न जाँचें, फिर प्रकाशित करें",
+  "Close review": "समीक्षा बंद करें",
+  Published: "प्रकाशित",
+  Draft: "ड्राफ्ट",
+  "Answer explanation and marking": "उत्तर की व्याख्या और अंकन",
+  "Show next questions for review": "समीक्षा के लिए अगले प्रश्न खोलें",
+  "I reviewed all questions, answer keys and marking shown for this test.":
+    "मैंने इस टेस्ट के सभी प्रश्न, उत्तर कुंजी और अंकन की समीक्षा कर ली है।",
+  "Open all questions before confirming the review.":
+    "समीक्षा की पुष्टि से पहले सभी प्रश्न खोलें।",
+  "Publish this test for students":
+    "विद्यार्थियों के लिए यह टेस्ट प्रकाशित करें",
+  "Publishing…": "प्रकाशित हो रहा है…",
+  "Published. Students can now start this test.":
+    "प्रकाशित हो गया। विद्यार्थी अब यह टेस्ट शुरू कर सकते हैं।",
+  "This test is published and available in the student's matching subject series.":
+    "यह टेस्ट प्रकाशित है और विद्यार्थी की संबंधित विषय सीरीज़ में उपलब्ध है।",
+  "Full Maths mock: 100 marks, 195 minutes including 15 minutes reading.":
+    "पूर्ण गणित मॉक: 100 अंक, पढ़ने के 15 मिनट सहित कुल 195 मिनट।",
+  "Answer 50 of 100 MCQs, 15 of 30 short answers and 4 of 8 long answers.":
+    "100 में 50 MCQ, 30 में 15 लघु और 8 में 4 दीर्घ प्रश्नों के उत्तर दें।",
+  "Publishing this mock also approves the displayed source-linked reference layout. Your own edited content requires a different administrator.":
+    "यह मॉक प्रकाशित करने पर दिखाया गया स्रोत सहित प्रारूप भी स्वीकृत होगा। अपने संपादित प्रश्नों के लिए दूसरे प्रशासक की समीक्षा आवश्यक है।",
+  "The Class 10 starter contains six subject practice tests and a full-length Maths mock: 7 tests, 198 original questions. Import, review the keys and publish from Administration.":
+    "कक्षा 10 स्टार्टर में छह विषयों के अभ्यास टेस्ट और पूरा गणित मॉक है: 7 टेस्ट, 198 मौलिक प्रश्न। प्रशासन से आयात करें, उत्तर जाँचें और प्रकाशित करें।",
+  "These are real original foundation questions with suggested keys. Review them before making a test available to students. The full Maths mock follows the 2026 reference layout; it is not an official paper or complete syllabus coverage.":
+    "इन मौलिक आधारभूत प्रश्नों और सुझाए उत्तरों को विद्यार्थियों के लिए प्रकाशित करने से पहले जाँचें। पूरा गणित मॉक 2026 के संदर्भ प्रारूप पर है; यह आधिकारिक पेपर या संपूर्ण पाठ्यक्रम नहीं है।",
 };

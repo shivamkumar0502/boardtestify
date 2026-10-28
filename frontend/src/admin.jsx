@@ -1,3 +1,4 @@
+import { StarterReview } from "./starter-review";
 import { QuestionImport } from "./question-import";
 import { tr, useLanguage } from "@boardtestify/i18n";
 import { useState } from "react";
@@ -57,7 +58,10 @@ export function Admin() {
             : []),
           ...(user.role === "SUPER_ADMIN" ? ["Audit"] : []),
         ];
-  const [tab, setTab] = useState(tabs[0]);
+  const [tab, setTab] = useState(() => {
+    const requested = new URLSearchParams(window.location.search).get("tab");
+    return tabs.includes(requested) ? requested : tabs[0];
+  });
   const [importJob, setImportJob] = useState("");
   const openImport = (id) => {
     setImportJob(id);
@@ -1033,6 +1037,7 @@ function Audit() {
 function PracticePackImporter({ onImported }) {
   useLanguage();
   const { data, error } = useLoad("/admin/practice-packs");
+  const [reviewing, setReviewing] = useState(false);
   const [busy, setBusy] = useState(""),
     [err, setError] = useState(""),
     [message, setMessage] = useState("");
@@ -1049,6 +1054,7 @@ function PracticePackImporter({ onImported }) {
         ),
       );
       onImported();
+      if (packId === "class10-starter") setReviewing(true);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -1083,10 +1089,25 @@ function PracticePackImporter({ onImported }) {
             disabled={!!busy}
             onClick={() => importPack(pack.id)}
           >
-            {busy === pack.id ? tr("Importing…") : tr("Import draft pack")}
+            {busy === pack.id
+              ? tr("Importing…")
+              : pack.id === "class10-starter"
+                ? tr("Import actual tests & review")
+                : tr("Import draft pack")}
           </button>
+          {pack.id === "class10-starter" && (
+            <button className="button ghost" onClick={() => setReviewing(true)}>
+              {tr("Open starter test review")}
+            </button>
+          )}
         </div>
       ))}
+      {reviewing && (
+        <StarterReview
+          onPublished={onImported}
+          onClose={() => setReviewing(false)}
+        />
+      )}
     </section>
   );
 }
