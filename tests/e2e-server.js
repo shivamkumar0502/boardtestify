@@ -33,6 +33,22 @@ const passwordHash = await bcrypt.default.hash(
 );
 await User.create([
   {
+    name: "Fixture Mobile Author",
+    email: "author-mobile@fixture.example",
+    passwordHash,
+    role: "ADMIN",
+    classLevel: "10",
+    stream: "GENERAL",
+  },
+  {
+    name: "Fixture Mobile Reviewer",
+    email: "reviewer-mobile@fixture.example",
+    passwordHash,
+    role: "ADMIN",
+    classLevel: "10",
+    stream: "GENERAL",
+  },
+  {
     name: "Fixture Author",
     email: "author@fixture.example",
     passwordHash,

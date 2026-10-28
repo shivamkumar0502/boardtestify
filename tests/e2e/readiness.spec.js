@@ -44,6 +44,9 @@ test("Hindi registration and dashboard work without translating stored enum valu
   ).toBe(true);
 });
 async function login(page, email) {
+  // Independent browser actors avoid consuming one account's real login quota.
+  if (page.viewportSize()?.width < 600)
+    email = email.replace("@fixture.example", "-mobile@fixture.example");
   await page.goto("/login");
   await page.getByLabel("Email address").fill(email);
   await page
@@ -444,4 +447,77 @@ test("real local photo OCR works without paid provider and produces editable MCQ
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+});
+
+test("administrator imports actual starter questions, reviews a test and starts it from the series", async ({
+  page,
+}, info) => {
+  const science = info.project.name === "mobile-web";
+  const title = science
+    ? /^Electricity · Practice 01/
+    : /^Grammar & vocabulary · Practice 01/;
+  const question = science
+    ? "An ohmic resistor is 3 Ω across 6 V. Current in amperes?"
+    : "Choose: She ___ to school every day.";
+  await login(page, "author@fixture.example");
+  await page.goto("/app/tests");
+  await page
+    .getByRole("link", { name: "Add actual tests", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Import actual tests & review", exact: true })
+    .click();
+  const review = page.getByRole("region", {
+    name: "Review starter tests",
+    exact: true,
+  });
+  await expect(
+    review.getByRole("heading", { name: "Review questions, then publish" }),
+  ).toBeVisible();
+  await review.getByRole("button", { name: title }).click();
+  await expect(review.getByText(question, { exact: true })).toBeVisible();
+  await expect(
+    review.getByRole("button", {
+      name: "Publish this test for students",
+      exact: true,
+    }),
+  ).toBeDisabled();
+  await review
+    .getByRole("checkbox", {
+      name: "I reviewed all questions, answer keys and marking shown for this test.",
+      exact: true,
+    })
+    .check();
+  await review
+    .getByRole("button", {
+      name: "Publish this test for students",
+      exact: true,
+    })
+    .click();
+  await expect(
+    review.getByText("Published. Students can now start this test.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.goto("/app/tests");
+  const card = page
+    .locator(".test-card")
+    .filter({
+      has: page.getByRole("heading", {
+        name: science ? "Science" : "English",
+        exact: true,
+      }),
+    })
+    .filter({ hasText: "2026-27" });
+  await expect(
+    card.getByText("1 tests · 1 free", { exact: true }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: info.outputPath("published-starter-series.png"),
+    fullPage: true,
+  });
+  await card.getByRole("button", { name: "View tests", exact: true }).click();
+  await page.getByRole("button", { name: "Start test", exact: true }).click();
+  await expect(page.getByText(question, { exact: true })).toBeVisible();
+  await expect(page.getByRole("radio")).toHaveCount(4);
 });

@@ -2,10 +2,11 @@ import { PaperGuide } from "./paper-guide";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { tr, useLanguage } from "@boardtestify/i18n";
-import { useLoad, Notice, Empty } from "./main";
+import { useLoad, useApp, Notice, Empty } from "./main";
 import { request } from "./api";
 export function SeriesLibrary() {
   useLanguage();
+  const { user } = useApp();
   const { data: groups, error } = useLoad("/test-series");
   const billing = useLoad("/billing");
   const guide = useLoad("/test-series/board-guide");
@@ -121,6 +122,21 @@ export function SeriesLibrary() {
         <p>{tr("Choose a subject, pick a test and start practicing.")}</p>
       </div>
       <Notice error>{error || err}</Notice>
+      {!selected &&
+        user.classLevel === "10" &&
+        ["ADMIN", "SUPER_ADMIN"].includes(user.role) && (
+          <div className="panel starter-callout">
+            <h2>{tr("Add actual tests to these subjects")}</h2>
+            <p>
+              {tr(
+                "The Class 10 starter contains six subject practice tests and a full-length Maths mock: 7 tests, 198 original questions. Import, review the keys and publish from Administration.",
+              )}
+            </p>
+            <Link className="button primary" to="/app/admin?tab=Tests">
+              {tr("Add actual tests")}
+            </Link>
+          </div>
+        )}
       {!selected && (
         <>
           <div className="series-hero panel">
