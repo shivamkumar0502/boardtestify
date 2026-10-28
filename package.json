@@ -15,7 +15,7 @@
     "dev": "concurrently -n api,web \"npm run dev -w @boardtestify/api\" \"npm run dev -w @boardtestify/web\"",
     "build": "npm run build -w @boardtestify/web",
     "test": "node --test tests/*.test.js",
-    "test:integration": "node --test tests/*.integration.js",
+    "test:integration": "node --test --test-concurrency=1 tests/*.integration.js",
     "seed": "npm run seed -w @boardtestify/api",
     "admin": "npm run admin -w @boardtestify/api",
     "check": "node scripts/check.mjs",
