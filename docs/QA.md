@@ -5,12 +5,12 @@ Local checks on 28 October 2026. These results concern the repository source and
 | Check                                                        | Result                                                 |
 | ------------------------------------------------------------ | ------------------------------------------------------ |
 | JavaScript syntax and no TypeScript source (`npm run check`) | Pass                                                   |
-| Domain/scoring/locale tests (`npm test`)                     | 116 passed; optional backup-tools case skipped locally |
-| MongoDB/API integration (`npm run test:integration`)         | 16 passed; optional backup-tools case skipped locally  |
+| Domain/scoring/locale tests (`npm test`)                     | 23 passed |
+| MongoDB/API integration (`npm run test:integration`)         | 19 passed; optional backup-tools case skipped locally  |
 | React production build                                       | Pass                                                   |
 | Expo Android JS/Hermes bundle export                         | Pass; not a signed APK/AAB                             |
 
-Browser acceptance: 12 tests passed across desktop Chrome and Pixel 5 mobile-web emulation. They cover Hindi registration/dashboard/exam, visual question creation, blocked self-approval, second-reviewer publication, visual test creation, persisted/reloaded answers, submission/results and narrow-screen layout. The PDF flow includes a real two-page upload, ordered private previews, refresh with restored pages, and final submission. The staff configuration checklist is also exercised. Hindi fonts are bundled with the website, including offline exam use.
+Browser acceptance: 16 tests passed across desktop Chrome and Pixel 5 mobile-web emulation. They cover Hindi registration/dashboard/exam, visual question creation, blocked self-approval, second-reviewer publication, visual test creation, persisted/reloaded answers, submission/results and narrow-screen layout. The PDF flow includes a real two-page upload, ordered private previews, refresh with restored pages, and final submission. The staff configuration checklist is also exercised. Hindi fonts are bundled with the website, including offline exam use.
 
 Integration coverage includes authorization, independent publication, source-backed pattern validation, private image validation, OCR/vision review fallback, one-use OTP challenges, captured one-time/recurring payments, cancellation/full refunds/replay, reading time, internal choices, concurrent answer conflicts, shared rate windows, overload gates, fenced evaluation lease recovery and database outage/reconnect without loss of saved answers. External paid providers use controlled adapter responses; no live charge/SMS or provider acceptance claim follows from those tests.
 
@@ -24,9 +24,9 @@ The isolated benchmark uses a local disposable MongoDB, two HTTP listeners in **
 | ----------------------------------------------------- | ---------------------------------------- |
 | Students / concurrent student flows                   | 100 / 50                                 |
 | Requests                                              | 1,200                                    |
-| Duration / request rate                               | 6.14 seconds / 195.6 requests per second |
-| Request latency p50 / p95                             | 226.5 ms / 346.5 ms                      |
-| Maximum event-loop delay                              | 81.5 ms                                  |
+| Duration / request rate                               | 6.92 seconds / 173.3 requests per second |
+| Request latency p50 / p95                             | 228.0 ms / 627.0 ms                      |
+| Maximum event-loop delay                              | 302.3 ms                                  |
 | Attempts with every expected answer and correct score | 100                                      |
 | Request/data-integrity errors                         | 0                                        |
 
@@ -53,3 +53,9 @@ The production-only workspace dependency installation and Sharp runtime check pa
 The admin pack browser flow covers importing/re-importing original draft tests without a terminal on desktop and mobile web. API tests reject student/editor import, validate 80 original bilingual questions and arithmetic keys, keep all generated content unpublished, preserve teacher edits and record the importing administrator. Original questions are illustrative, not an official board paper or verified syllabus. Imports use bounded batches to reduce serial Atlas round-trips.
 
 Native result handler tests execute the compiled component with controlled hooks/API responses: both retry buttons call the correct filter and navigate, simultaneous taps issue one request, failures display without navigation, saved pages render and section-choice exclusions are labelled. Expo Android bundle export passed. This is not physical-device or store-billing acceptance.
+
+## Series discovery and source-question imports
+
+Series integration checks cover scoped publication, class isolation, cursor pagination, literal search, free filters, resume/result state and omission of question IDs/answer keys. Authoring integration checks use controlled vision-provider and private-storage adapters for a real validated photo upload, preserve unknown keys, reject invalid saves, enforce private ownership/read-only administrator evidence access, record a draft-save audit, prevent duplicate commits, cap pending jobs, recover leases and retry provider failures. Paste parser tests preserve multiline Hindi/math and reject invalid keys/duplicate options/oversized imports. Real book OCR accuracy is not established by mocked provider responses.
+
+Browser tests exercise subject-series navigation and paste → compact editable question review → draft test on desktop/mobile, plus clear subject/question validation instead of raw JSON errors. Series and review screenshots were inspected. The final local IPv4 mapping and compact-review refinements were rechecked with targeted authoring and browser flows.

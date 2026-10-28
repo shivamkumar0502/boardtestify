@@ -864,4 +864,78 @@ export default {
     "स्रोत PDF के साथ रूपांतरित अभ्यास; प्रस्तावित उत्तरों की समीक्षा आवश्यक है।",
   "Original illustrative questions; not an official paper or verified syllabus.":
     "मौलिक उदाहरणात्मक प्रश्न; आधिकारिक प्रश्नपत्र या सत्यापित पाठ्यक्रम नहीं।",
+  "YOUR BOARD. YOUR TEST SERIES.": "आपका बोर्ड। आपकी टेस्ट सीरीज़।",
+  "Test series": "टेस्ट सीरीज़",
+  "Choose a subject, pick a test and start practicing.":
+    "विषय चुनें, टेस्ट चुनें और अभ्यास शुरू करें।",
+  "{0} tests · {1} free": "{0} टेस्ट · {1} निःशुल्क",
+  "Practice, mocks and results in one place.":
+    "अभ्यास, मॉक टेस्ट और परिणाम एक जगह।",
+  "View tests": "टेस्ट देखें",
+  "← All test series": "← सभी टेस्ट सीरीज़",
+  "Hindi / English where available": "जहाँ उपलब्ध, हिन्दी / अंग्रेज़ी",
+  "Test access": "टेस्ट की पहुँच",
+  "Free and premium": "निःशुल्क और प्रीमियम",
+  "{0} questions": "{0} प्रश्न",
+  "Load more tests": "और टेस्ट देखें",
+  "No tests match your filters": "इन फ़िल्टर से कोई टेस्ट नहीं मिला",
+  "Try another mode or clear your search.": "दूसरा मोड चुनें या खोज साफ़ करें।",
+  "Add questions": "प्रश्न जोड़ें",
+  "Create test from photo or text": "फोटो या टेक्स्ट से टेस्ट बनाएँ",
+  "PHOTO → REVIEW → DRAFT TEST": "फोटो → समीक्षा → ड्राफ्ट टेस्ट",
+  "Add questions the simple way": "आसानी से प्रश्न जोड़ें",
+  "Upload a clear book-page photo or paste questions. Check the result before saving. Nothing is published automatically.":
+    "किताब के पृष्ठ की साफ़ फोटो डालें या प्रश्न चिपकाएँ। सुरक्षित करने से पहले जाँचें। कुछ भी अपने आप प्रकाशित नहीं होता।",
+  "Paste questions": "प्रश्न चिपकाएँ",
+  "Book photo": "किताब की फोटो",
+  "CSV / Excel": "CSV / Excel",
+  "Source / book name": "स्रोत / किताब का नाम",
+  "Book page photo": "किताब के पृष्ठ की फोटो",
+  "JPEG, PNG or WebP · up to 5 MB · crop to at most ten questions. Diagrams need a separate cropped question image.":
+    "JPEG, PNG या WebP · अधिकतम 5 MB · दस प्रश्नों तक की फोटो काटकर डालें। चित्र वाले प्रश्न के लिए अलग कटी हुई इमेज जोड़ें।",
+  "Photo extraction needs private storage plus OCR or vision AI. Pasted questions work without AI keys.":
+    "फोटो पढ़ने के लिए निजी स्टोरेज और OCR या विज़न AI चाहिए। चिपकाए गए प्रश्न AI कुंजी के बिना काम करते हैं।",
+  "Paste question text": "प्रश्नों का टेक्स्ट चिपकाएँ",
+  "Use 1. question, then A), B), C), D) on separate lines. Answer: B is optional; missing keys must be filled during review.":
+    "1. प्रश्न के बाद A), B), C), D) अलग पंक्तियों में लिखें। Answer: B वैकल्पिक है; उत्तर समीक्षा के समय भरें।",
+  "Working…": "कार्य जारी…",
+  "Extract questions": "प्रश्न निकालें",
+  "Review extracted questions": "निकाले गए प्रश्न जाँचें",
+  "Your import is queued or processing. You can leave this page and open it from recent imports.":
+    "आपका आयात कतार में है या पढ़ा जा रहा है। बाद में हाल के आयात से खोल सकते हैं।",
+  "View source photo": "स्रोत फोटो देखें",
+  "Uploaded book page": "अपलोड किया गया पुस्तक पृष्ठ",
+  "Extracted source text": "निकाला गया स्रोत टेक्स्ट",
+  "Use this text in paste mode": "यह टेक्स्ट चिपकाने वाले मोड में लें",
+  "Retry extraction": "फिर से प्रश्न निकालें",
+  "Duration (minutes)": "समय (मिनट)",
+  "Question {0}": "प्रश्न {0}",
+  "A save was interrupted. Finish saving the previously reviewed version; edits are frozen.":
+    "पिछली बार सुरक्षित करना रुक गया था। पहले जाँचा हुआ संस्करण सुरक्षित करें; संपादन बंद है।",
+  "Save draft test": "ड्राफ्ट टेस्ट सुरक्षित करें",
+  "Open test drafts": "टेस्ट ड्राफ्ट खोलें",
+  "Recent imports": "हाल के आयात",
+  "Choose a subject before saving.": "सुरक्षित करने से पहले विषय चुनें।",
+  "Enter the book or source name.": "किताब या स्रोत का नाम लिखें।",
+  "Photo must be smaller than 5 MB": "फोटो 5 MB से कम होनी चाहिए",
+  "Saved as draft. Review and publish the questions before publishing the test.":
+    "ड्राफ्ट सुरक्षित हुआ। टेस्ट प्रकाशित करने से पहले प्रश्नों की समीक्षा और प्रकाशन करें।",
+  "Add at least one question to every section before saving.":
+    "सुरक्षित करने से पहले हर खंड में कम से कम एक प्रश्न जोड़ें।",
+  "Check the subject, questions and marking fields before saving.":
+    "सुरक्षित करने से पहले विषय, प्रश्न और अंक संबंधी विवरण जाँचें।",
+  READY: "समीक्षा के लिए तैयार",
+  PROCESSING: "कार्य जारी",
+  PENDING: "कतार में",
+  FAILED: "विफल",
+  SAVED: "सुरक्षित",
+  "View import source": "आयात का स्रोत देखें",
+  "Option {0}": "विकल्प {0}",
+  "Correct answer": "सही उत्तर",
+  "Choose the correct option": "सही विकल्प चुनें",
+  "Simple editor": "सरल संपादक",
+  "More fields: images, translations and rubrics":
+    "और विवरण: इमेज, अनुवाद और अंकन मानदंड",
+  "All chapters": "सभी अध्याय",
+  "New import / edit source": "नया आयात / स्रोत बदलें",
 };

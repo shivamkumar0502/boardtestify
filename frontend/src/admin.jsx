@@ -1,3 +1,4 @@
+import { QuestionImport } from "./question-import";
 import { tr, useLanguage } from "@boardtestify/i18n";
 import { useState } from "react";
 import { Plus, Shield, Upload, Check, Copy, Sparkles } from "lucide-react";
@@ -46,6 +47,7 @@ export function Admin() {
       : [
           "Questions",
           "Tests",
+          "Add questions",
           "Academics",
           "Import",
           "AI drafts",
@@ -56,6 +58,11 @@ export function Admin() {
           ...(user.role === "SUPER_ADMIN" ? ["Audit"] : []),
         ];
   const [tab, setTab] = useState(tabs[0]);
+  const [importJob, setImportJob] = useState("");
+  const openImport = (id) => {
+    setImportJob(id);
+    setTab("Add questions");
+  };
   return (
     <>
       <div className="page-heading">
@@ -70,6 +77,13 @@ export function Admin() {
           )}
         </p>
       </div>
+      {user.role !== "EVALUATOR" && (
+        <div className="toolbar">
+          <button className="button primary" onClick={() => openImport("")}>
+            {tr("Create test from photo or text")}
+          </button>
+        </div>
+      )}
       <div className="tabs admin-tabs">
         {tr(
           tabs.map((t) => (
@@ -84,9 +98,20 @@ export function Admin() {
         )}
       </div>
       {tab === "Questions" ? (
-        <ContentEditor key="questions" kind="questions" />
+        <ContentEditor
+          key="questions"
+          kind="questions"
+          onImportSource={openImport}
+        />
       ) : tab === "Tests" ? (
         <ContentEditor key="tests" kind="tests" />
+      ) : tab === "Add questions" ? (
+        <QuestionImport
+          key={importJob || "new"}
+          initialJobId={importJob}
+          onSaved={() => setTab("Tests")}
+          onCSV={() => setTab("Import")}
+        />
       ) : tab === "Academics" ? (
         <Academics />
       ) : tab === "Import" ? (
@@ -105,7 +130,7 @@ export function Admin() {
     </>
   );
 }
-function ContentEditor({ kind }) {
+function ContentEditor({ kind, onImportSource }) {
   useLanguage();
   const { user } = useApp();
   const [page, setPage] = useState(1);
@@ -153,9 +178,20 @@ function ContentEditor({ kind }) {
     setBusy(true);
     setErr("");
     try {
+      const body = JSON.parse(json);
+      if (!/^[a-f0-9]{24}$/i.test(body.academic?.subjectId || ""))
+        throw Error("Choose a subject before saving.");
+      if (
+        kind === "tests" &&
+        (!body.sections?.length ||
+          body.sections.some((s) => !s.questionIds?.length))
+      )
+        throw Error(
+          "Add at least one question to every section before saving.",
+        );
       await request(
         `/admin/${kind}${editing === "new" ? "" : `/${editing}`}`,
-        JSON.parse(json),
+        body,
         editing === "new" ? "POST" : "PUT",
       );
       setMsg("Saved as draft.");
@@ -163,7 +199,9 @@ function ContentEditor({ kind }) {
       reload();
     } catch (e) {
       setErr(
-        e.details ? `${e.message}: ${JSON.stringify(e.details)}` : e.message,
+        e.message === "Validation failed"
+          ? "Check the subject, questions and marking fields before saving."
+          : e.message,
       );
     } finally {
       setBusy(false);
@@ -276,6 +314,14 @@ function ContentEditor({ kind }) {
                 {tr(r.version)}
               </span>
               <h3>{r.data.title || tr(r.data.text)}</h3>
+              {r.originJobId && onImportSource && (
+                <button
+                  className="button ghost"
+                  onClick={() => onImportSource(r.originJobId)}
+                >
+                  {tr("View import source")}
+                </button>
+              )}
               {(r.data.sourceUrl || r.data.officialSource) && (
                 <a
                   className="accent small"

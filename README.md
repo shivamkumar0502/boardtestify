@@ -98,3 +98,7 @@ No real paid-provider activation, official-content approval, signed AAB, product
 ## Import practice tests from Administration
 
 Administration → Tests → Add practice tests provides one-click import for the historical BSEB mini pack (5 tests/15 questions) and an original bilingual pack (8 tests/80 questions). Both remain drafts for teacher review and publication. Originals are illustrative practice, not official BSEB questions or a verified syllabus. The CLI alternative is `npm run seed:practice`. Repeat imports preserve edited/published records. Android result retry actions and uploaded-page previews are supported; native purchases still use the website.
+
+## Simple series and photo-to-question authoring
+
+The student website now groups approved tests into subject/session series with search, mode/free filters, resume and result links. Administration → Create test from photo or text accepts book-page photos, formatted pasted questions, or links to CSV/Excel import. Review extracted fields and save a draft test without JSON; independent question approval remains required. Photos need configured storage and OCR/vision, while the paste template works without AI keys. Run migrations and a worker after updating. See [series and authoring guide](docs/SERIES_AND_QUESTION_IMPORT.md).
