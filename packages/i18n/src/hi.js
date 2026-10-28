@@ -849,4 +849,19 @@ export default {
   "Answer storage is temporarily unavailable. Please retry.":
     "उत्तर संग्रहण अभी उपलब्ध नहीं है। दोबारा प्रयास करें।",
   "Open source paper": "स्रोत प्रश्नपत्र खोलें",
+  "Practice pack library": "अभ्यास पैक संग्रह",
+  "Add practice tests": "अभ्यास टेस्ट जोड़ें",
+  "Import ready-to-review drafts. Re-importing preserves edits and does not duplicate content.":
+    "समीक्षा के लिए तैयार ड्राफ्ट आयात करें। दोबारा आयात करने पर संपादन सुरक्षित रहेंगे और प्रतियाँ नहीं बनेंगी।",
+  "Import draft pack": "ड्राफ्ट पैक आयात करें",
+  "Pack ready: {0} tests, {1} questions. Review drafts before publication.":
+    "पैक तैयार: {0} टेस्ट, {1} प्रश्न। प्रकाशित करने से पहले ड्राफ्ट की समीक्षा करें।",
+  "{0} tests · {1} questions · session {2}":
+    "{0} टेस्ट · {1} प्रश्न · सत्र {2}",
+  "BSEB 2026 source-based mini pack": "BSEB 2026 स्रोत आधारित लघु पैक",
+  "Original academic practice pack": "मौलिक शैक्षिक अभ्यास पैक",
+  "Adapted practice with source PDFs; suggested keys require review.":
+    "स्रोत PDF के साथ रूपांतरित अभ्यास; प्रस्तावित उत्तरों की समीक्षा आवश्यक है।",
+  "Original illustrative questions; not an official paper or verified syllabus.":
+    "मौलिक उदाहरणात्मक प्रश्न; आधिकारिक प्रश्नपत्र या सत्यापित पाठ्यक्रम नहीं।",
 };

@@ -107,6 +107,7 @@ export function Admin() {
 }
 function ContentEditor({ kind }) {
   useLanguage();
+  const { user } = useApp();
   const [page, setPage] = useState(1);
   const { data, error, reload } = useLoad(
     `/admin/${kind}${kind === "questions" ? `?page=${page}` : ""}`,
@@ -180,6 +181,9 @@ function ContentEditor({ kind }) {
   }
   return (
     <>
+      {kind === "tests" && ["ADMIN", "SUPER_ADMIN"].includes(user.role) && (
+        <PracticePackImporter onImported={reload} />
+      )}
       <div className="toolbar">
         <div>
           <h2>
@@ -977,5 +981,66 @@ function Audit() {
         )),
       )}
     </div>
+  );
+}
+
+function PracticePackImporter({ onImported }) {
+  useLanguage();
+  const { data, error } = useLoad("/admin/practice-packs");
+  const [busy, setBusy] = useState(""),
+    [err, setError] = useState(""),
+    [message, setMessage] = useState("");
+  async function importPack(packId) {
+    setBusy(packId);
+    setError("");
+    setMessage("");
+    try {
+      const result = await request("/admin/practice-packs/import", { packId });
+      setMessage(
+        tr(
+          "Pack ready: {0} tests, {1} questions. Review drafts before publication.",
+          [result.tests, result.questions],
+        ),
+      );
+      onImported();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy("");
+    }
+  }
+  return (
+    <section className="panel" aria-label={tr("Practice pack library")}>
+      <h2>{tr("Add practice tests")}</h2>
+      <p className="muted small">
+        {tr(
+          "Import ready-to-review drafts. Re-importing preserves edits and does not duplicate content.",
+        )}
+      </p>
+      <Notice error>{error || err}</Notice>
+      <Notice>{message}</Notice>
+      {data?.map((pack) => (
+        <div className="admin-row" key={pack.id}>
+          <div>
+            <h3>{tr(pack.title)}</h3>
+            <p className="muted small">{tr(pack.note)}</p>
+            <small>
+              {tr("{0} tests · {1} questions · session {2}", [
+                pack.tests,
+                pack.questions,
+                pack.session,
+              ])}
+            </small>
+          </div>
+          <button
+            className="button subtle"
+            disabled={!!busy}
+            onClick={() => importPack(pack.id)}
+          >
+            {busy === pack.id ? tr("Importing…") : tr("Import draft pack")}
+          </button>
+        </div>
+      ))}
+    </section>
   );
 }

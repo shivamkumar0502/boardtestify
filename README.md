@@ -94,3 +94,7 @@ No real paid-provider activation, official-content approval, signed AAB, product
 ## BSEB source-based mini tests
 
 `npm run seed:bseb` imports five reviewable draft mini tests (15 bilingual MCQs) based on the official 2026 Matric/Intermediate model-paper topics: Class 10 Mathematics/Science and Class 12 Physics, History and Accountancy. Run migrations first. These are adapted practice sets with suggested keys, not full official papers or approved 2027 content. See [test pack and publication steps](docs/BSEB_TEST_PACK.md).
+
+## Import practice tests from Administration
+
+Administration → Tests → Add practice tests provides one-click import for the historical BSEB mini pack (5 tests/15 questions) and an original bilingual pack (8 tests/80 questions). Both remain drafts for teacher review and publication. Originals are illustrative practice, not official BSEB questions or a verified syllabus. The CLI alternative is `npm run seed:practice`. Repeat imports preserve edited/published records. Android result retry actions and uploaded-page previews are supported; native purchases still use the website.

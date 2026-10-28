@@ -1,3 +1,4 @@
+import { packRoutes } from "./pack-routes.js";
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
@@ -71,6 +72,7 @@ app.use("/api/auth", otp);
 app.use(
   "/api",
   integrations,
+  packRoutes,
   billing,
   content,
   management,

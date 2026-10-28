@@ -9,7 +9,8 @@
     "admin": "node --env-file-if-exists=../.env src/manage.js admin",
     "worker": "node --env-file-if-exists=../.env src/worker.js",
     "migrate": "node --env-file-if-exists=../.env src/migrate.js",
-    "seed:bseb": "node --env-file-if-exists=../.env src/manage.js seed:bseb"
+    "seed:bseb": "node --env-file-if-exists=../.env src/manage.js seed:bseb",
+    "seed:practice": "node --env-file-if-exists=../.env src/manage.js seed:practice"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.840.0",

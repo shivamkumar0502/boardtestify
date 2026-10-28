@@ -1,5 +1,5 @@
 import { tr, useLanguage } from "@boardtestify/i18n";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { ScrollView, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { api } from "../../src/api";
@@ -9,8 +9,10 @@ export default function Result() {
   useLanguage();
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const retryLock = useRef(false);
   const [r, setR] = useState(null),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [retryBusy, setRetryBusy] = useState(false);
   useEffect(() => {
     const load = () =>
       api(`/attempts/${id}/result`)
@@ -18,19 +20,26 @@ export default function Result() {
         .catch((e) => setError(e.message));
     void load();
     const timer = setInterval(load, 10000);
-    async function retry(filter) {
-      try {
-        const a = await api(`/attempts/${id}/retry`, {
-          filter,
-          feedbackMode: "IMMEDIATE",
-        });
-        router.replace(`/exam/${a.id}`);
-      } catch (e) {
-        setError(e.message);
-      }
-    }
     return () => clearInterval(timer);
   }, [id]);
+  async function retry(filter) {
+    if (retryLock.current) return;
+    retryLock.current = true;
+    setRetryBusy(true);
+    setError("");
+    try {
+      const attempt = await api(`/attempts/${id}/retry`, {
+        filter,
+        feedbackMode: "IMMEDIATE",
+      });
+      router.replace(`/exam/${attempt.id}`);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      retryLock.current = false;
+      setRetryBusy(false);
+    }
+  }
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.content}>
       <ErrorText message={error} />
@@ -68,10 +77,18 @@ export default function Result() {
                 )
               : tr("Review, reflect and improve on your next attempt.")}
           </Text>
-          <Button secondary onPress={() => retry("INCORRECT")}>
+          <Button
+            secondary
+            disabled={retryBusy}
+            onPress={() => retry("INCORRECT")}
+          >
             {tr("Retry incorrect questions")}
           </Button>
-          <Button secondary onPress={() => retry("UNANSWERED")}>
+          <Button
+            secondary
+            disabled={retryBusy}
+            onPress={() => retry("UNANSWERED")}
+          >
             {tr("Retry unanswered questions")}
           </Button>
           {tr(
@@ -85,12 +102,21 @@ export default function Result() {
                     {tr(i + 1)}
                     {tr(" \xB7")}
                     {tr(" ")}
-                    {e.status === "EVALUATED"
+                    {e?.status === "EVALUATED"
                       ? tr("{0}/{1}", [e.awardedMarks, q.maximumMarks])
-                      : tr("AWAITING REVIEW")}
+                      : e?.status === "NOT_COUNTED"
+                        ? tr("Not counted: section choice limit")
+                        : tr("AWAITING REVIEW")}
                   </Text>
                   <Text style={s.h2}>{tr(q.text)}</Text>
                   <Text style={s.small}>{tr("YOUR ANSWER")}</Text>
+                  {(a?.attachmentIds || []).map((assetId, index) => (
+                    <NativeAttachment
+                      key={assetId}
+                      id={assetId}
+                      index={index}
+                    />
+                  ))}
                   <Text style={s.text}>
                     {Array.isArray(a?.value)
                       ? tr(
