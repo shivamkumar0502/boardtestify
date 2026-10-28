@@ -12,6 +12,12 @@ integrations.get("/features", async (_req, res) =>
     aiVision: env.AI_VISION_ENABLED === "true",
     handwritingOCR: !!env.OCR_API_KEY,
     storage: storageEnabled(),
+    questionPhotoImport:
+      storageEnabled() &&
+      !!(
+        env.OCR_API_KEY ||
+        (env.AI_API_KEY && env.AI_MODEL && env.AI_VISION_ENABLED === "true")
+      ),
     pdfSheets: storageEnabled() && (await pdfAvailable()),
     payments: paymentsEnabled(),
     passwordReset: !!(env.SMTP_URL && env.MAIL_FROM),

@@ -2418,3 +2418,88 @@ pre {
 .checkbox-label {
   overflow-wrap: anywhere;
 }
+
+.series-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+.series-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+.series-test-list {
+  display: grid;
+  gap: 16px;
+}
+.series-test {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+}
+.series-test h3,
+.series-card h3 {
+  overflow-wrap: anywhere;
+}
+.series-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+@media (max-width: 640px) {
+  .series-test {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .series-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .series-summary {
+    flex-direction: column;
+  }
+}
+
+.paste-question-text {
+  min-height: 220px;
+  white-space: pre-wrap;
+}
+.source-photo-preview {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  max-height: 650px;
+  object-fit: contain;
+  margin: 16px 0;
+}
+.source-ocr-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 300px;
+  overflow: auto;
+}
+.import-question-editor {
+  border: 0;
+  padding: 0;
+  margin: 20px 0;
+  min-width: 0;
+}
+.import-question-editor > .button {
+  max-width: 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.import-history-row {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: left;
+  margin: 8px 0;
+  white-space: normal;
+}

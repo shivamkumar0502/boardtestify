@@ -69,6 +69,7 @@ export const Academic = make("Academic", {
   verifiedAt: Date,
 });
 export const QuestionModel = make("Question", {
+  originJobId: String,
   data: Schema.Types.Mixed,
   hash: { type: String, unique: true },
   status: { type: String, default: "DRAFT" },
@@ -240,7 +241,42 @@ export const Resource = make("Resource", {
   syllabusSessions: [String],
   note: String,
 });
+export const AuthoringJob = make(
+  "AuthoringJob",
+  {
+    ownerId: String,
+    slot: Number,
+    status: {
+      type: String,
+      enum: ["PENDING", "PROCESSING", "READY", "FAILED", "SAVED"],
+      default: "PENDING",
+    },
+    method: String,
+    input: Schema.Types.Mixed,
+    result: Schema.Types.Mixed,
+    commitInput: Schema.Types.Mixed,
+    savedTestId: String,
+    attempts: { type: Number, default: 0 },
+    leaseToken: String,
+    leaseUntil: Date,
+    error: String,
+    deleteAfter: Date,
+  },
+  [
+    [{ ownerId: 1, createdAt: -1 }, {}],
+    [{ status: 1, leaseUntil: 1, createdAt: 1 }, {}],
+    [{ deleteAfter: 1 }, {}],
+    [
+      { ownerId: 1, slot: 1 },
+      {
+        unique: true,
+        partialFilterExpression: { status: { $in: ["PENDING", "PROCESSING"] } },
+      },
+    ],
+  ],
+);
 const indexedModels = [
+  AuthoringJob,
   User,
   Session,
   Reset,
@@ -260,6 +296,7 @@ const indexedModels = [
 ];
 export async function connect(uri) {
   await mongoose.connect(uri, {
+    ...(env.DB_IP_FAMILY ? { family: env.DB_IP_FAMILY } : {}),
     maxPoolSize: env.DB_POOL_MAX,
     minPoolSize: 2,
     serverSelectionTimeoutMS: env.DB_SELECTION_TIMEOUT_MS,
@@ -298,3 +335,22 @@ TestModel.schema.index({
   createdAt: -1,
 });
 Payment.schema.index({ userId: 1, status: 1, expiresAt: -1 });
+
+TestModel.schema.index({
+  status: 1,
+  "data.academic.classLevel": 1,
+  "data.academic.stream": 1,
+  "data.academic.subjectId": 1,
+  _id: -1,
+});
+
+Attempt.schema.index({ userId: 1, testId: 1, createdAt: -1 });
+
+TestModel.schema.index({
+  status: 1,
+  "data.academic.classLevel": 1,
+  "data.academic.stream": 1,
+  "data.academic.subjectId": 1,
+  "data.academic.chapterId": 1,
+  _id: -1,
+});

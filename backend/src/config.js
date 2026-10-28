@@ -23,6 +23,14 @@ export const env = z
     S3_BUCKET: z.string().default(""),
     S3_ACCESS_KEY_ID: z.string().default(""),
     S3_SECRET_ACCESS_KEY: z.string().default(""),
+    DB_IP_FAMILY: z.preprocess(
+      (v) => (v === "" ? undefined : v),
+      z.coerce
+        .number()
+        .int()
+        .refine((v) => v === 4 || v === 6, "Use 4 or 6")
+        .optional(),
+    ),
     DB_POOL_MAX: z.coerce.number().int().min(5).max(200).default(30),
     DB_SELECTION_TIMEOUT_MS: z.coerce
       .number()

@@ -1,3 +1,4 @@
+import { SeriesLibrary } from "./series";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -904,133 +905,9 @@ function Stat({ label, value, detail }) {
   );
 }
 function Tests() {
-  useLanguage();
-  const { data, error } = useLoad("/tests");
-  const [filter, setFilter] = useState("ALL"),
-    [query, setQuery] = useState("");
-  const [busy, setBusy] = useState(""),
-    [err, setErr] = useState("");
-  const nav = useNavigate();
-  async function start(id) {
-    setBusy(id);
-    setErr("");
-    try {
-      const a = await request(`/tests/${id}/start`, {});
-      nav(`/exam/${a.id}`);
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setBusy("");
-    }
-  }
-  return (
-    <>
-      <div className="page-heading">
-        <span className="eyebrow">{tr("PREPARE WITH PURPOSE")}</span>
-        <h1>
-          {tr("Find your next challenge")}
-          <span className="accent">{tr(".")}</span>
-        </h1>
-        <p>
-          {tr(
-            "Approved content for your class and stream. One focused attempt at a time.",
-          )}
-        </p>
-      </div>
-      <div className="toolbar">
-        <div className="tabs">
-          {tr(
-            ["ALL", "PRACTICE", "CBT", "BOARD"].map((t) => (
-              <button
-                onClick={() => setFilter(t)}
-                className={filter === t ? "active" : ""}
-                key={t}
-              >
-                {t === "ALL"
-                  ? tr("All tests")
-                  : t === "BOARD"
-                    ? tr("Board mocks")
-                    : t === "PRACTICE"
-                      ? tr("Practice")
-                      : tr("CBT mocks")}
-              </button>
-            )),
-          )}
-        </div>
-        <input
-          aria-label={tr("Search tests")}
-          placeholder={tr("Search tests…")}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </div>
-      <Notice error>{error || tr(err)}</Notice>
-      {data ? (
-        <div className="test-grid">
-          {tr(
-            data
-              .filter(
-                (t) =>
-                  (filter === "ALL" || t.mode === filter) &&
-                  t.title.toLowerCase().includes(query.toLowerCase()),
-              )
-              .map((t) => (
-                <article className="test-card" key={t.id}>
-                  <div className="row between">
-                    <span className="tag orange-tag">
-                      {t.mode === "BOARD" ? tr("BOARD MOCK") : tr(t.mode)}
-                    </span>
-                    <BookOpen size={21} className="muted" />
-                  </div>
-                  <h3>{tr(t.title)}</h3>
-                  <p>{tr(t.description)}</p>
-                  <div className="test-meta">
-                    <span>
-                      <Timer size={15} />
-                      {t.durationMinutes
-                        ? tr("{0} min", [t.durationMinutes])
-                        : tr("Untimed")}
-                    </span>
-                    <span>
-                      {tr(t.sections.reduce((s, x) => s + x.count, 0))}
-                      {tr(" questions")}
-                    </span>
-                  </div>
-                  <div className="row between card-foot">
-                    <small className={t.premium ? "accent" : "muted"}>
-                      {t.premium ? tr("Study pass") : tr("Free practice")}
-                    </small>
-                    <button
-                      disabled={!!busy}
-                      onClick={() => start(t.id)}
-                      className="button subtle"
-                    >
-                      {busy === t.id ? tr("Starting…") : tr("Start test")}
-                      {tr(" ")}
-                      <ArrowUpRight size={16} />
-                    </button>
-                  </div>
-                </article>
-              )),
-          )}
-        </div>
-      ) : (
-        <p>{tr("Loading available tests\u2026")}</p>
-      )}
-      {data &&
-        !data.filter(
-          (t) =>
-            (filter === "ALL" || t.mode === filter) &&
-            t.title.toLowerCase().includes(query.toLowerCase()),
-        ).length && (
-          <Empty
-            title="More practice is on the way"
-            detail="No approved tests match this selection yet. Administrators can publish verified content."
-          />
-        )}
-    </>
-  );
+  return <SeriesLibrary />;
 }
+
 function AttemptRows({ rows }) {
   useLanguage();
   return (

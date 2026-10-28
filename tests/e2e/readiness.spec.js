@@ -24,6 +24,11 @@ test("Hindi registration and dashboard work without translating stored enum valu
   ).toBeVisible();
   await page
     .locator(".test-card")
+    .filter({ hasText: "Mathematics · sample practice" })
+    .getByRole("button", { name: "टेस्ट देखें", exact: true })
+    .click();
+  await page
+    .locator(".test-card")
     .filter({ hasText: "Getting started · sample practice" })
     .getByRole("button", { name: "टेस्ट शुरू करें", exact: true })
     .click();
@@ -153,14 +158,12 @@ test("administrator imports original test drafts from the pack library without a
   await expect(
     page.getByRole("heading", { name: "Add practice tests" }),
   ).toBeVisible();
-  const card = page
-    .locator(".admin-row")
-    .filter({
-      has: page.getByRole("heading", {
-        name: "Original academic practice pack",
-        exact: true,
-      }),
-    });
+  const card = page.locator(".admin-row").filter({
+    has: page.getByRole("heading", {
+      name: "Original academic practice pack",
+      exact: true,
+    }),
+  });
   await card.getByRole("button", { name: "Import draft pack" }).click();
   await expect(
     page.getByText(
@@ -185,4 +188,89 @@ test("administrator imports original test drafts from the pack library without a
       exact: true,
     }),
   ).toHaveCount(1);
+});
+
+test("staff turn pasted questions into an editable draft test without JSON", async ({
+  page,
+}, info) => {
+  await login(page, "author@fixture.example");
+  await page
+    .getByRole("button", {
+      name: "Create test from photo or text",
+      exact: true,
+    })
+    .click();
+  await page
+    .getByRole("combobox", { name: "Subject", exact: true })
+    .selectOption({ label: "Mathematics · sample practice" });
+  await page.getByLabel("Source / book name").fill("Owned worksheet fixture");
+  await page
+    .getByLabel("Paste question text")
+    .fill("1. Evaluate 4 + 5.\nA) 8\nB) 9\nC) 10\nD) 11\nAnswer: B");
+  await page
+    .getByRole("button", { name: "Extract questions", exact: true })
+    .click();
+  await expect(
+    page.getByRole("textbox", { name: "Question text", exact: true }),
+  ).toHaveValue("Evaluate 4 + 5.");
+  await page
+    .getByLabel("Test title", { exact: true })
+    .fill(`Worksheet draft ${info.project.name}`);
+  await page.screenshot({
+    path: info.outputPath("question-review.png"),
+    fullPage: true,
+  });
+  await page
+    .getByRole("button", { name: "Save draft test", exact: true })
+    .click();
+  await expect(
+    page.getByText(
+      "Saved as draft. Review and publish the questions before publishing the test.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Open test drafts", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", {
+      name: `Worksheet draft ${info.project.name}`,
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: info.outputPath("simple-import.png"),
+    fullPage: true,
+  });
+});
+
+test("manual test validation asks for subject and questions without raw JSON errors", async ({
+  page,
+}) => {
+  await login(page, "author@fixture.example");
+  await page.getByRole("button", { name: "Tests", exact: true }).click();
+  await page.getByRole("button", { name: "Create test", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Validate & save draft", exact: true })
+    .click();
+  await expect(
+    page.getByText("Choose a subject before saving.", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("combobox", { name: "Subject", exact: true })
+    .selectOption({ label: "Mathematics · sample practice" });
+  await page
+    .getByRole("button", { name: "Validate & save draft", exact: true })
+    .click();
+  await expect(
+    page.getByText(
+      "Add at least one question to every section before saving.",
+      { exact: true },
+    ),
+  ).toBeVisible();
 });

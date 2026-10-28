@@ -145,7 +145,7 @@ export function AcademicPicker({ value, onChange }) {
     </>
   );
 }
-export function QuestionForm({ value: q, onChange }) {
+export function QuestionForm({ value: q, onChange, hideAcademic = false }) {
   useLanguage();
   const [uploading, setUploading] = useState(false),
     [error, setError] = useState("");
@@ -169,10 +169,12 @@ export function QuestionForm({ value: q, onChange }) {
   }
   return (
     <div className="authoring-form">
-      <AcademicPicker
-        value={q.academic}
-        onChange={(academic) => set("academic", academic)}
-      />
+      {!hideAcademic && (
+        <AcademicPicker
+          value={q.academic}
+          onChange={(academic) => set("academic", academic)}
+        />
+      )}
       <div className="grid-three">
         <label>
           {tr("Question type")}
@@ -214,6 +216,7 @@ export function QuestionForm({ value: q, onChange }) {
           {tr("Question language")}
           <select
             value={q.language}
+            disabled={hideAcademic}
             onChange={(e) => set("language", e.target.value)}
           >
             <option value="en">{tr("English")}</option>
@@ -525,6 +528,7 @@ export function QuestionForm({ value: q, onChange }) {
           {tr("Source / attribution")}
           <input
             value={q.source}
+            readOnly={hideAcademic}
             onChange={(e) => set("source", e.target.value)}
           />
         </label>
@@ -556,6 +560,7 @@ export function QuestionForm({ value: q, onChange }) {
         <input
           type="checkbox"
           checked={!!q.isPYQ}
+          disabled={hideAcademic}
           onChange={(e) => set("isPYQ", e.target.checked)}
         />
         {tr(

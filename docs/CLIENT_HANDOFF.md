@@ -58,3 +58,7 @@ Five bilingual mini-test drafts / fifteen adapted MCQs can be inserted with `npm
 Administration → Tests can import the five BSEB source-linked mini drafts or eight original practice drafts without shell access (13 tests/95 questions in total). Imports require an administrator and preserve existing edits/publication. Review suggested keys and publish before student access. Original questions are not official BSEB content or verified syllabus coverage.
 
 Android incorrect/unanswered retry callbacks now work from result buttons, suppress duplicate taps and surface API failures. Saved answer-photo/PDF-page evidence is rendered in native results, and section-choice exclusions show as not counted. Native billing/distribution choices, paid-provider acceptance and physical-device release testing remain external release work.
+
+## Series and photo/text authoring
+
+The web student library now groups published tests by subject/session and offers cursor-paged discovery, start/resume and results. Staff have a guided photo/paste → review → draft-test shortcut, with CSV/Excel as another entry point. Jobs persist in MongoDB with bounded slots, leases and fenced worker completion. Photo extraction needs real private storage plus OCR/vision configuration; the paste template works without AI keys. Source evidence is readable by administrators for independent review and retained seven days. Run migrations and the separate production worker. See SERIES_AND_QUESTION_IMPORT.md for setup, API bounds and remaining provider/staging acceptance.

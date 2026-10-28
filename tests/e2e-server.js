@@ -50,6 +50,14 @@ await User.create([
   },
 ]);
 const { app } = await import("../backend/src/app.js");
+const { authoringTick } = await import("../backend/src/authoring-jobs.js");
+let extraction = null;
+const authoringTimer = setInterval(() => {
+  if (!extraction)
+    extraction = authoringTick().finally(() => {
+      extraction = null;
+    });
+}, 200);
 // Disposable S3 adapter on the same origin, so browser CSP and previews are exercised.
 const images = new Map();
 const server = http
@@ -82,6 +90,8 @@ const server = http
   .listen(4173, "127.0.0.1");
 process.on("SIGTERM", () =>
   server.close(async () => {
+    clearInterval(authoringTimer);
+    if (extraction) await extraction;
     await mongoose.disconnect();
     await mongo.stop();
     process.exit(0);

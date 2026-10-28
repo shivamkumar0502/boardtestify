@@ -27,6 +27,19 @@ test("student registers, starts a persisted test, reloads, and receives a provis
     page.getByRole("heading", { name: /Let’s make progress/ }),
   ).toBeVisible();
   await page.getByRole("link", { name: "Explore tests" }).click();
+  await page.screenshot({
+    path: info.outputPath("test-series.png"),
+    fullPage: true,
+  });
+  await page
+    .locator(".test-card")
+    .filter({ hasText: "Mathematics · sample practice" })
+    .getByRole("button", { name: "View tests", exact: true })
+    .click();
+  await page.screenshot({
+    path: info.outputPath("series-tests.png"),
+    fullPage: true,
+  });
   await page
     .locator(".test-card")
     .filter({ hasText: "Getting started · sample practice" })
