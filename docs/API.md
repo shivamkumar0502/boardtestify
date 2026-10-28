@@ -56,3 +56,9 @@ Question imports use one `question_json` column. Preview checks shape, academic 
 - `POST /billing/subscriptions/:id/cancel`: cancel renewal while preserving already-paid access.
 
 The signed raw-body webhook also handles subscription status/charges and full-refund access revocation. Invalid signatures cannot mutate grants. Repeated verification never extends the same grant.
+
+## PDF and release additions
+
+`POST /api/attempts/:id/sheets` accepts a page photo (5 MB) or PDF (10 MB), `questionId` and optional `maxPages` (1–4 remaining slots). Photo responses retain `{id,mime,size}`; PDF responses return `{pages:[{id,mime,size},...]}` in original page order. PDFs cannot exceed remaining slots or be password protected. Original PDFs are discarded. Actual answer saves still enforce four attached pages, ownership and deadlines. `/api/features.pdfSheets` advertises executable PDF tools plus configured storage.
+
+`GET /api/admin/readiness` requires ADMIN/SUPER_ADMIN and returns only presence states/missing variable names and acceptance tasks, never credential values or automatic release approval. Password reset links are tied to the account authentication version; resetting invalidates older links and sessions.

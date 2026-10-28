@@ -8,11 +8,16 @@ import { Attempt, Attachment } from "./models.js";
 import { putImage, deleteImage, imageURL } from "./storage.js";
 import { concurrencyGate, sharedLimit } from "./reliability.js";
 import { env } from "./config.js";
+import { renderAnswerPDF } from "./pdf.js";
 export const attachments = Router();
 attachments.use(auth);
 const imageGate = concurrencyGate(2);
 sharp.concurrency(1);
 sharp.cache({ memory: 16, files: 0, items: 20 });
+const sheetUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10_000_000, files: 1, fields: 2, parts: 3 },
+}).single("file");
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5_000_000, files: 1, fields: 2, parts: 3 },
@@ -66,61 +71,105 @@ attachments.post(
     key: (req) => String(req.user._id),
   }),
   imageGate,
-  upload,
+  sheetUpload,
   async (req, res) => {
     const attemptId = id.parse(req.params.id),
-      questionId = id.parse(req.body.questionId);
-    const a = await Attempt.findOne({
+      questionId = id.parse(req.body.questionId),
+      ownerId = String(req.user._id);
+    const active = () => ({
       _id: attemptId,
-      userId: String(req.user._id),
+      userId: ownerId,
       status: "ACTIVE",
-    }).select("questions deadline");
-    assert(
-      a && (!a.deadline || a.deadline > new Date()),
-      409,
-      "Attempt is finalized or expired",
-    );
+      $and: [
+        { $or: [{ deadline: null }, { deadline: { $gt: new Date() } }] },
+        { $or: [{ readUntil: null }, { readUntil: { $lte: new Date() } }] },
+      ],
+    });
+    const a = await Attempt.findOne(active()).select("questions");
+    assert(a, 409, "Attempt is finalized, expired or in its reading period");
     assert(
       a.questions.some((q) => q._id === questionId && isDescriptive(q.type)),
       400,
       "Attach sheets to a descriptive question",
     );
-    assert(req.file, 400, "Choose an answer-sheet image");
+    assert(req.file, 400, "Choose an answer-sheet photo or PDF");
+    const isPDF = req.file.buffer.subarray(0, 5).toString("ascii") === "%PDF-";
+    const maxPages = Number(req.body.maxPages ?? 4);
     assert(
-      (await Attachment.countDocuments({
-        attemptId,
-        questionId,
-        ownerId: String(req.user._id),
-      })) < 8,
+      Number.isInteger(maxPages) && maxPages >= 1 && maxPages <= 4,
       400,
-      "Maximum eight uploads per question; attach up to four pages",
+      "Attach a maximum of four pages per answer",
     );
-    const bytes = await normalizeImage(req.file.buffer);
-    const key = `answer-sheets/${randomToken()}.jpeg`;
-    await putImage(key, bytes);
+    const sourcePages = isPDF
+      ? await renderAnswerPDF(req.file.buffer, maxPages)
+      : [req.file.buffer];
+    const pages = [];
+    for (const bytes of sourcePages) pages.push(await normalizeImage(bytes));
+    const scope = { attemptId, questionId, ownerId };
+    // Initialize legacy attempts once, then atomically reserve upload capacity.
+    const counter = `uploadCounts.${questionId}`;
+    const existing = await Attachment.countDocuments(scope);
+    await Attempt.updateOne(
+      { ...active(), [counter]: { $exists: false } },
+      { $set: { [counter]: existing } },
+    );
+    const reserved = await Attempt.updateOne(
+      { ...active(), [counter]: { $lte: 8 - pages.length } },
+      { $inc: { [counter]: pages.length } },
+    );
+    assert(
+      reserved.matchedCount,
+      409,
+      "Upload limit reached or attempt expired. Maximum eight uploaded pages per question.",
+    );
+    const keys = [],
+      rows = [];
     try {
-      const row = await Attachment.create({
-        ownerId: String(req.user._id),
-        attemptId,
-        questionId,
-        key,
-        mime: "image/jpeg",
-        size: bytes.length,
-        checksum: createHash("sha256").update(bytes).digest("hex"),
-        status: "READY",
-        deleteAfter: new Date(
-          Date.now() + env.ATTACHMENT_RETENTION_DAYS * 86400000,
-        ),
-      });
-      res
-        .status(201)
-        .json({ id: String(row._id), mime: row.mime, size: row.size });
+      for (const bytes of pages) {
+        const key = `answer-sheets/${randomToken()}.jpeg`;
+        keys.push(key);
+        await putImage(key, bytes);
+        const row = await Attachment.create({
+          ...scope,
+          key,
+          mime: "image/jpeg",
+          size: bytes.length,
+          checksum: createHash("sha256").update(bytes).digest("hex"),
+          status: "READY",
+          deleteAfter: new Date(
+            Date.now() + env.ATTACHMENT_RETENTION_DAYS * 86400000,
+          ),
+        });
+        rows.push(row);
+      }
+      assert(
+        await Attempt.exists(active()),
+        409,
+        "Attempt finalized or expired during upload. Pages were not attached.",
+      );
+      const results = rows.map((row) => ({
+        id: String(row._id),
+        mime: row.mime,
+        size: row.size,
+      }));
+      // Keep the original one-photo response compatible with older clients.
+      res.status(201).json(isPDF ? { pages: results } : results[0]);
     } catch (e) {
-      await deleteImage(key).catch(() => {});
+      await Promise.allSettled(
+        keys.map(async (key) => {
+          await deleteImage(key);
+          await Attachment.deleteOne({ key, ...scope });
+        }),
+      );
+      await Attempt.updateOne(
+        { _id: attemptId },
+        { $inc: { [counter]: -pages.length } },
+      );
       throw e;
     }
   },
 );
+
 attachments.post(
   "/admin/question-image",
   (req, res, next) => {

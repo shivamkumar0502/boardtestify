@@ -1,0 +1,17 @@
+.git
+**/node_modules
+**/dist
+**/.expo
+.env
+.env.*
+!.env.example
+**/*.log
+**/test-results
+**/playwright-report
+**/android-export
+**/*.archive.gz
+**/*.manifest.json
+
+**/credentials.json
+**/*.jks
+**/*.keystore

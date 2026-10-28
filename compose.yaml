@@ -1,0 +1,56 @@
+name: boardtestify
+services:
+  api:
+    build: .
+    image: boardtestify:local
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      RUN_WORKER: "false"
+    ports:
+      - "127.0.0.1:4000:4000"
+    init: true
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    mem_limit: 1g
+    cpus: 2.0
+    pids_limit: 128
+    stop_grace_period: 35s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+  worker:
+    image: boardtestify:local
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+    command: ["node", "backend/src/worker.js"]
+    init: true
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    mem_limit: 512m
+    cpus: 1.0
+    pids_limit: 64
+    stop_grace_period: 35s
+    healthcheck:
+      disable: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

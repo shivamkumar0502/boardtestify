@@ -17,6 +17,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { answerStatus, hasAnswer } from "@boardtestify/domain";
 import { api, uploadFile } from "../../src/api";
 import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
 import { NativeAttachment } from "../../src/extras";
 import { isDescriptive } from "@boardtestify/domain";
 import { s, Button, ErrorText } from "../../src/ui";
@@ -24,6 +25,12 @@ export default function Exam() {
   useLanguage();
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const [pdfEnabled, setPdfEnabled] = useState(false);
+  useEffect(() => {
+    api("/features")
+      .then((f) => setPdfEnabled(f.pdfSheets))
+      .catch(() => {});
+  }, []);
   const [a, setA] = useState(null),
     [idx, setIdx] = useState(0),
     [error, setError] = useState(""),
@@ -189,13 +196,19 @@ export default function Exam() {
     if (!queue.current[q._id] && !a.answers[q._id]?.visited)
       change(q.type.endsWith("CHOICE") ? [] : "");
   }, [idx, a?.id]);
-  async function pickPage(camera = false) {
+  async function pickPage(camera = false, pdf = false) {
     if (uploading) return;
     const question = data.current.questions[idx];
     setUploading(true);
     try {
       let picked;
-      if (camera) {
+      if (pdf) {
+        picked = await DocumentPicker.getDocumentAsync({
+          type: "application/pdf",
+          copyToCacheDirectory: true,
+          multiple: false,
+        });
+      } else if (camera) {
         const permission = await ImagePicker.requestCameraPermissionsAsync();
         if (!permission.granted)
           throw Error("Camera permission is required to photograph a page");
@@ -210,15 +223,21 @@ export default function Exam() {
         });
       if (picked.canceled) return;
       const asset = picked.assets[0];
+      if (pdf && asset.size > 10_000_000)
+        throw Error("PDF must be smaller than 10 MB");
       const uploaded = await uploadFile(
         `/attempts/${id}/sheets`,
         {
           uri: asset.uri,
-          name: asset.fileName || "answer.jpg",
-          type: asset.mimeType || "image/jpeg",
+          name: asset.name || asset.fileName || "answer.jpg",
+          type: asset.mimeType || (pdf ? "application/pdf" : "image/jpeg"),
         },
         {
           questionId: question._id,
+          maxPages:
+            4 -
+            ((queue.current[question._id] || data.current.answers[question._id])
+              ?.attachmentIds?.length || 0),
         },
       );
       const current =
@@ -229,7 +248,10 @@ export default function Exam() {
         value: current?.value || "",
         review: current?.review ?? false,
         visited: true,
-        attachmentIds: [...(current?.attachmentIds || []), uploaded.id],
+        attachmentIds: [
+          ...(current?.attachmentIds || []),
+          ...(uploaded.pages || [uploaded]).map((page) => page.id),
+        ],
         generation: ++seq.current,
       };
       await persist();
@@ -546,6 +568,26 @@ export default function Exam() {
             >
               {tr("Photograph answer page")}
             </Button>
+            {pdfEnabled && (
+              <Button
+                secondary
+                disabled={
+                  uploading ||
+                  conflict ||
+                  remaining === 0 ||
+                  readingLeft > 0 ||
+                  (answer?.attachmentIds?.length || 0) >= 4
+                }
+                onPress={() => pickPage(false, true)}
+              >
+                {tr("Choose answer PDF")}
+              </Button>
+            )}
+            <Text style={s.muted}>
+              {tr(
+                "PDF: up to 10 MB. Maximum four pages including existing photos.",
+              )}
+            </Text>
             {tr(
               (answer?.attachmentIds || []).map((assetId, i) => (
                 <NativeAttachment

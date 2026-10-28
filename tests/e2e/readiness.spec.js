@@ -119,3 +119,28 @@ test("staff use visual authoring, a second reviewer approves, and a test is buil
     ),
   ).toBe(true);
 });
+
+test("staff see release configuration gaps without exposing service keys", async ({
+  page,
+}, info) => {
+  await login(page, "author@fixture.example");
+  await page.getByRole("button", { name: "Operations", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Release readiness" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Missing configuration: AI_API_KEY, AI_MODEL"),
+  ).toBeVisible();
+  await expect(
+    page.getByText("PDF answer sheets", { exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: info.outputPath("release-readiness.png"),
+    fullPage: true,
+  });
+});

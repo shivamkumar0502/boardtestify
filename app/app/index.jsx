@@ -20,6 +20,7 @@ import {
   NativePhone,
   NativeBilling,
   NativeAccountEditor,
+  NativePasswordRecovery,
 } from "../src/extras";
 import { getLanguage, tr, useLanguage } from "@boardtestify/i18n";
 import { s, Button, ErrorText } from "../src/ui";
@@ -27,6 +28,7 @@ export default function Home() {
   useLanguage();
   const router = useRouter();
   const [showOtp, setShowOtp] = useState(false);
+  const [showRecovery, setShowRecovery] = useState(false);
   const [ready, setReady] = useState(false),
     [signed, setSigned] = useState(false),
     [signup, setSignup] = useState(false),
@@ -238,6 +240,17 @@ export default function Home() {
                     ? tr("Create account →")
                     : tr("Sign in →")}
               </Button>
+              {!signup && (
+                <>
+                  <Button
+                    secondary
+                    onPress={() => setShowRecovery(!showRecovery)}
+                  >
+                    {tr("Forgot password?")}
+                  </Button>
+                  {showRecovery && <NativePasswordRecovery />}
+                </>
+              )}
               <Button
                 secondary
                 onPress={() => {
@@ -384,7 +397,7 @@ export default function Home() {
                     ]}
                   >
                     {tr(
-                      "Use the website for password reset, study pass checkout and administration.",
+                      "Use the website for study pass checkout and administration.",
                     )}
                   </Text>
                   <Button

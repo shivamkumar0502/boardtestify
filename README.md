@@ -6,7 +6,7 @@ Bihar Board Class 10 and Class 12 Arts, Science and Commerce preparation. React 
 
 ## Run from VS Code
 
-Requirements: Node.js 22+, npm and local MongoDB or MongoDB Atlas.
+Requirements: Node.js 22+, npm and local MongoDB or MongoDB Atlas. PDF uploads/tests additionally require Poppler (`pdfinfo` and `pdftoppm`), plus `util-linux` on Linux. Photo uploads do not require Poppler.
 
 ```bash
 npm ci
@@ -43,7 +43,7 @@ Install from the repository root so npm links shared workspaces. `npm run dev` s
 - Subject/chapter/topic administration, source verification, draft/review/publication controls, CSV/Excel question import with per-row validation, archive expansion checks and duplicate detection, and AI-assisted original question drafts.
 - Persistent CBT attempts with server deadlines, optional reading periods, autosave/offline queues, revision checks, reconnect/resume, review palettes, repeat-safe submission, timeout finalization and immutable question snapshots.
 - Practice feedback after saving objective answers and targeted retry of incorrect or unanswered questions. Full mocks keep answer keys hidden until submission.
-- Typed answer evaluation and handwritten photo uploads. Validated/re-encoded private images go through Google Vision OCR; an image-capable configured AI model can inspect handwriting/diagrams. Teacher review is required for handwritten/diagram marks. Invalid or unavailable providers do not become zero marks.
+- Typed answer evaluation, handwritten photo uploads and multi-page PDF uploads. Validated/re-encoded private images go through Google Vision OCR; an image-capable configured AI model can inspect handwriting/diagrams. Teacher review is required for handwritten/diagram marks. Invalid or unavailable providers do not become zero marks.
 - Student results/progress, official-reference library, class/stream-scoped announcements, administrative queue/health counters and compact audit history.
 - Configurable one-time study plans and Razorpay recurring subscriptions, provider-verified captured payments, invoice/subscription matching, cancellation of renewals, full-refund access revocation and replay-safe entitlements.
 
@@ -65,9 +65,13 @@ Connection pools, wait queues, body sizes, upload pixels, import expansion, heav
 
 ## Android
 
-Set `EXPO_PUBLIC_API_URL` to your HTTPS API or emulator-reachable development URL. An Android emulator can use `http://10.0.2.2:4000/api`. Run `npm run dev:app`. Native students can register/sign in, link phones, switch language, see announcements/references, edit profiles, attempt exams, photograph/upload answers, view feedback and retry questions. Subscription status/cancellation are available; purchases and staff administration use the website in this version.
+Set `EXPO_PUBLIC_API_URL` to your HTTPS API or emulator-reachable development URL. An Android emulator can use `http://10.0.2.2:4000/api`. Run `npm run dev:app`. Native students can register/sign in, link phones, switch language, see announcements/references, edit profiles, attempt exams, photograph/upload answers, select answer PDFs, request password-reset emails, view feedback and retry questions. Subscription status/cancellation are available; purchases and staff administration use the website in this version.
 
 `app/eas.json` defines preview APK and production AAB profiles. A JS bundle export is not a signed Android release. Expo/Android signing credentials and real-device acceptance are required before distribution.
+
+## Release tooling
+
+`npm run preflight` reports missing integration configuration without sending provider requests. Administration → Operations shows the same checklist. `Dockerfile` and `compose.yaml` provide a Linux API/worker setup with Poppler, resource bounds and health checks. `npm run db:backup` and `npm run db:restore-drill` support checksummed database archives and isolated recovery drills. See [operations guide](docs/OPERATIONS.md) for setup and remaining client acceptance.
 
 ## Validation
 

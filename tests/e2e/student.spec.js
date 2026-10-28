@@ -1,3 +1,4 @@
+import { answerPDF } from "../fixtures/pdf.js";
 import { test, expect } from "@playwright/test";
 test("student registers, starts a persisted test, reloads, and receives a provisional result", async ({
   page,
@@ -45,6 +46,25 @@ test("student registers, starts a persisted test, reloads, and receives a provis
     .getByLabel("Write your answer in Hindi or English")
     .fill("Add 6 to both sides: 3x = 15. Divide by 3 to get x = 5.");
   await expect(page.getByText("All answers saved")).toBeVisible();
+  await page.getByLabel("Upload answer sheet").setInputFiles({
+    name: "answer.pdf",
+    mimeType: "application/pdf",
+    buffer: answerPDF(),
+  });
+  await expect(page.getByAltText("Answer-sheet page 1")).toBeVisible();
+  await expect(page.getByAltText("Answer-sheet page 2")).toBeVisible();
+  await expect(page.getByText("All answers saved")).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Save & next" }).click();
+  await expect(page.getByAltText("Answer-sheet page 1")).toBeVisible();
+  await expect(page.getByAltText("Answer-sheet page 2")).toBeVisible();
+  await expect(
+    page.getByLabel("Write your answer in Hindi or English"),
+  ).toHaveValue("Add 6 to both sides: 3x = 15. Divide by 3 to get x = 5.");
+  await page.screenshot({
+    path: info.outputPath("pdf-answer-pages.png"),
+    fullPage: true,
+  });
   await page.getByRole("button", { name: "Submit test", exact: true }).click();
   await page
     .getByRole("dialog")

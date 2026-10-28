@@ -2,7 +2,7 @@
 
 ## What the source now includes
 
-Separate frontend/backend/app projects; Hindi/English UI; visual authoring; question/rubric/source approval; subject/session pattern management; private handwritten answer photos and optional OCR/vision; manual evaluation; targeted practice retry and instant objective feedback; announcements; phone linking/OTP sign-in; configurable plans, recurring billing/cancellation/refunds; bounded API/database/worker operations; migrations, synthetic load tests and a teacher-calibration runner.
+Separate frontend/backend/app projects; Hindi/English UI; visual authoring; question/rubric/source approval; subject/session pattern management; private handwritten answer photos/PDF pages and optional OCR/vision; manual evaluation; targeted practice retry and instant objective feedback; announcements; phone linking/OTP sign-in; configurable plans, recurring billing/cancellation/refunds; bounded API/database/worker operations; migrations, synthetic load tests and a teacher-calibration runner.
 
 The platform is a preparation tool, not an official BSEB grading service. Handwritten and diagram marks remain provisional until teacher approval. Never describe local tests as a guarantee of hosting capacity or evaluation accuracy.
 
@@ -42,3 +42,9 @@ Build/sign the Android release with the client's signing identity and complete p
 ## Suggested acceptance scenarios
 
 A student signs up in Hindi, selects the right class/stream, starts a source-approved test, refreshes/reconnects, saves an answer photo before timeout, sees provisional feedback and then an evaluator-approved result. A reviewer cannot approve their own question changes. A renewed payment grants only the paid plan scope; repeat webhooks do not extend it, and full refunds revoke that grant. A database/provider outage returns a controlled unavailable/review state; recovery does not erase submitted answers.
+
+## Added release tooling
+
+Administration → Operations and `npm run preflight` list missing service configuration without displaying credentials or certifying provider acceptance. Web/Android now accept bounded PDF answer pages; Android can request a secure email reset link, completed on the HTTPS website. Password reset invalidates prior links and sessions, including concurrent stale reset attempts; legacy reset links must be requested again after this update.
+
+See OPERATIONS.md for the Linux Docker API/worker setup, PDF host requirements, checksummed database backups and restore drills into a new isolated database. The local recovery test uses real MongoDB tools with disposable data; it does not constitute a production recovery drill.

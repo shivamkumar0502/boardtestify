@@ -6,7 +6,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "./config.js";
-import { assert } from "./lib.js";
+import { assert, HttpError } from "./lib.js";
 export const storageEnabled = () =>
   !!(env.S3_BUCKET && env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY);
 let client;
@@ -24,17 +24,24 @@ function s3() {
   }));
 }
 export async function putImage(key, bytes) {
-  await s3().send(
-    new PutObjectCommand({
-      Bucket: env.S3_BUCKET,
-      Key: key,
-      Body: bytes,
-      ContentType: "image/jpeg",
-      CacheControl: "private, max-age=0",
-      Metadata: { validated: "reencoded-image" },
-    }),
-    { abortSignal: AbortSignal.timeout(15000) },
-  );
+  try {
+    await s3().send(
+      new PutObjectCommand({
+        Bucket: env.S3_BUCKET,
+        Key: key,
+        Body: bytes,
+        ContentType: "image/jpeg",
+        CacheControl: "private, max-age=0",
+        Metadata: { validated: "reencoded-image" },
+      }),
+      { abortSignal: AbortSignal.timeout(15000) },
+    );
+  } catch {
+    throw new HttpError(
+      503,
+      "Answer storage is temporarily unavailable. Please retry.",
+    );
+  }
 }
 export async function readImage(key) {
   const object = await s3().send(

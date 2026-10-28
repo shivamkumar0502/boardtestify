@@ -1,3 +1,6 @@
+import { env } from "./config.js";
+import { pdfAvailable } from "./pdf.js";
+import { integrationReadiness } from "./readiness.js";
 import { Router } from "express";
 import { z } from "zod";
 import {
@@ -256,4 +259,8 @@ management.get("/admin/operations", admins, async (_req, res) => {
     uptimeSeconds: Math.floor(process.uptime()),
     memoryMiB: Math.round(process.memoryUsage().rss / 1048576),
   });
+});
+
+management.get("/admin/readiness", admins, async (_req, res) => {
+  res.json(integrationReadiness(env, await pdfAvailable()));
 });
