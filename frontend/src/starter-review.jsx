@@ -2,11 +2,15 @@ import { useState, useEffect, useRef } from "react";
 import { tr, useLanguage } from "@boardtestify/i18n";
 import { useLoad, Notice } from "./main";
 import { request } from "./api";
-export function StarterReview({ onPublished, onClose }) {
+export function StarterReview({
+  onPublished,
+  onClose,
+  packId = "class10-starter",
+}) {
   useLanguage();
   const panel = useRef(null);
   const { data, error, reload } = useLoad(
-    "/admin/practice-packs/class10-starter/review",
+    `/admin/practice-packs/${encodeURIComponent(packId)}/review`,
   );
   const [selected, setSelected] = useState(""),
     [limit, setLimit] = useState(20),
@@ -28,11 +32,14 @@ export function StarterReview({ onPublished, onClose }) {
     setError("");
     setMessage("");
     try {
-      await request("/admin/practice-packs/class10-starter/publish", {
-        testId: test._id,
-        reviewToken: data.reviewToken,
-        confirmed: true,
-      });
+      await request(
+        `/admin/practice-packs/${encodeURIComponent(packId)}/publish`,
+        {
+          testId: test._id,
+          reviewToken: data.reviewToken,
+          confirmed: true,
+        },
+      );
       setMessage("Published. Students can now start this test.");
       setConfirmed(false);
       reload();
@@ -59,7 +66,7 @@ export function StarterReview({ onPublished, onClose }) {
       </div>
       <p>
         {tr(
-          "These are real original foundation questions with suggested keys. Review them before making a test available to students. The full Maths mock follows the 2026 reference layout; it is not an official paper or complete syllabus coverage.",
+          "Original foundation questions with suggested keys and marking rubrics. Review each test before student publication. Full mocks use a 2026 reference layout and separate theory marks from practical/internal assessment. They do not establish complete syllabus coverage.",
         )}
       </p>
       <Notice error>{error || err}</Notice>
@@ -92,13 +99,21 @@ export function StarterReview({ onPublished, onClose }) {
             <div className="notice">
               <strong>
                 {tr(
-                  "Full Maths mock: 100 marks, 195 minutes including 15 minutes reading.",
+                  "Full mock: {0} theory marks · {1} min total · {2} min reading",
+                  [
+                    layout.data.totalMarks,
+                    layout.data.durationMinutes,
+                    layout.data.readingMinutes,
+                  ],
                 )}
               </strong>
               <p>
-                {tr(
-                  "Answer 50 of 100 MCQs, 15 of 30 short answers and 4 of 8 long answers.",
-                )}
+                {layout.data.sections
+                  .map(
+                    (s) =>
+                      `${s.title}: ${s.answerCount}/${s.offered} × ${s.marksEach}`,
+                  )
+                  .join(" · ")}
               </p>
               <a
                 href={layout.data.officialSource}

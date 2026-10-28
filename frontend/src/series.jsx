@@ -122,21 +122,24 @@ export function SeriesLibrary() {
         <p>{tr("Choose a subject, pick a test and start practicing.")}</p>
       </div>
       <Notice error>{error || err}</Notice>
-      {!selected &&
-        user.classLevel === "10" &&
-        ["ADMIN", "SUPER_ADMIN"].includes(user.role) && (
-          <div className="panel starter-callout">
-            <h2>{tr("Add actual tests to these subjects")}</h2>
-            <p>
-              {tr(
-                "The Class 10 starter contains six subject practice tests and a full-length Maths mock: 7 tests, 198 original questions. Import, review the keys and publish from Administration.",
-              )}
-            </p>
-            <Link className="button primary" to="/app/admin?tab=Tests">
-              {tr("Add actual tests")}
-            </Link>
-          </div>
-        )}
+      {!selected && ["ADMIN", "SUPER_ADMIN"].includes(user.role) && (
+        <div className="panel starter-callout">
+          <h2>{tr("Add actual tests to these subjects")}</h2>
+          <p>
+            {tr(
+              user.classLevel === "10"
+                ? "The Class 10 starter contains six subject practice tests and a full-length Maths mock: 7 tests, 198 original questions. Import, review the keys and publish from Administration."
+                : "Class 12 Science, Arts and Commerce have separate starter packs. Choose your stream, review the questions and publish actual tests. Science includes a full Physics mock.",
+            )}
+          </p>
+          <Link
+            className="button primary"
+            to={`/app/admin?tab=Tests&pack=${user.classLevel === "10" ? "class10-starter" : `class12-${user.stream.toLowerCase()}-starter`}`}
+          >
+            {tr("Add actual tests")}
+          </Link>
+        </div>
+      )}
       {!selected && (
         <>
           <div className="series-hero panel">

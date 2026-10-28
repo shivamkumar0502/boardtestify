@@ -1,3 +1,4 @@
+import { starterIds, starterMetadata } from "./starter-definitions.js";
 import { seedStarter, starterReview, publishStarter } from "./starter-pack.js";
 import { Router } from "express";
 import { z } from "zod";
@@ -10,14 +11,7 @@ export const packRoutes = Router();
 packRoutes.use("/admin/practice-packs", auth, allow("ADMIN", "SUPER_ADMIN"));
 packRoutes.get("/admin/practice-packs", (_req, res) =>
   res.json([
-    {
-      id: "class10-starter",
-      title: "Class 10 · six-subject starter + full Maths mock",
-      tests: 7,
-      questions: 198,
-      session: "2026-27",
-      note: "Actual original questions and keys: six 10-question practice tests plus a 138-question Maths mock. Import, review and publish here.",
-    },
+    ...starterMetadata(),
     {
       id: "bseb-2026",
       title: "BSEB 2026 source-based mini pack",
@@ -48,12 +42,12 @@ packRoutes.post(
   async (req, res) => {
     const { packId } = z
       .object({
-        packId: z.enum(["bseb-2026", "original-v1", "class10-starter"]),
+        packId: z.enum(["bseb-2026", "original-v1", ...starterIds]),
       })
       .strict()
       .parse(req.body);
-    const result = await (packId === "class10-starter"
-      ? seedStarter()
+    const result = await (starterIds.includes(packId)
+      ? seedStarter(packId)
       : packId === "bseb-2026"
         ? seedBSEB()
         : seedOriginalPractice());
@@ -68,12 +62,13 @@ packRoutes.post(
 );
 
 packRoutes.get(
-  "/admin/practice-packs/class10-starter/review",
+  "/admin/practice-packs/:packId/review",
   concurrencyGate(2),
-  async (_req, res) => res.json(await starterReview()),
+  async (req, res) =>
+    res.json(await starterReview(z.enum(starterIds).parse(req.params.packId))),
 );
 packRoutes.post(
-  "/admin/practice-packs/class10-starter/publish",
+  "/admin/practice-packs/:packId/publish",
   sharedLimit({
     name: "starter-publish",
     limit: 20,
@@ -90,6 +85,12 @@ packRoutes.post(
       })
       .strict()
       .parse(req.body);
-    res.json(await publishStarter(req, input));
+    res.json(
+      await publishStarter(
+        req,
+        input,
+        z.enum(starterIds).parse(req.params.packId),
+      ),
+    );
   },
 );
