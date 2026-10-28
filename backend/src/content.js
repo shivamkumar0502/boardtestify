@@ -80,11 +80,18 @@ content.get("/tests", auth, async (req, res) => {
   );
 });
 content.use("/admin", auth);
-content.get("/admin/academics", editors, async (_req, res) =>
+content.get("/admin/academics", editors, async (req, res) => {
+  const filter = z
+    .object({
+      session: z.string().max(20).optional(),
+      classLevel: z.enum(["10", "12"]).optional(),
+      stream: z.enum(["GENERAL", "ARTS", "SCIENCE", "COMMERCE"]).optional(),
+    })
+    .parse(req.query);
   res.json(
-    await Academic.find().sort({ order: 1, name: 1 }).limit(1000).lean(),
-  ),
-);
+    await Academic.find(filter).sort({ order: 1, name: 1 }).limit(1000).lean(),
+  );
+});
 const academicInput = z.object({
   kind: z.enum(["SUBJECT", "CHAPTER", "TOPIC"]),
   name: z.string().trim().min(1).max(200),

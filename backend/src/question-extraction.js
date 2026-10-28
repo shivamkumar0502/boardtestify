@@ -45,18 +45,36 @@ export function parsePastedMCQ(text) {
   function flush() {
     if (!current) return;
     assert(
-      current.text && current.options.length >= 2,
+      current.text &&
+        (current.options.length === 0 || current.options.length >= 2),
       400,
       "Use numbered questions with A), B), C), D) options on separate lines",
     );
+    if (!current.options.length) {
+      current.type = "SHORT_ANSWER";
+      current.maximumMarks = 2;
+    }
     rows.push(candidate.parse(current));
     current = null;
     last = null;
   }
-  for (const raw of text.split(/\r?\n/)) {
+  const digits = "०१२३४५६७८९";
+  const letters = { क: "A", ख: "B", ग: "C", घ: "D" };
+  const normalized = text
+    .replace(/[०-९]/g, (d) => digits.indexOf(d))
+    .replace(/\(([कखगघ])\)/g, (_, letter) => `(${letters[letter]})`)
+    .replace(/^(?:प्रश्न|Q(?:uestion)?\.?)\s*(?=\d{1,3}[.)\-।]\s)/gim, "");
+  const lines = normalized
+    .split(/\r?\n/)
+    .flatMap((line) =>
+      (line.match(/\([A-Da-d]\)/g) || []).length >= 2
+        ? line.replace(/\s*(?=\([A-Da-d]\))/g, "\n").split("\n")
+        : [line],
+    );
+  for (const raw of lines) {
     const line = raw.trim();
     if (!line) continue;
-    const head = /^(\d{1,3})[.)]\s+(.+)/.exec(line),
+    const head = /^(\d{1,3})[.)\-।]\s+(.+)/.exec(line),
       option = /^\(?([A-Da-d])\s*[).:]\s*(.+)/.exec(line),
       answer = /^(?:answer|ans|उत्तर)\s*[:\-]\s*\(?([A-Da-d])\)?\s*$/i.exec(
         line,
@@ -181,7 +199,7 @@ export async function extractQuestionJob(job) {
     ocrText: text,
     warnings: [
       ...warnings,
-      "Verify question text and answer keys. Missing answers must be filled before saving.",
+      "Verify question text and answer keys. Missing keys and descriptive marking rubrics must be filled before saving.",
     ],
   };
 }

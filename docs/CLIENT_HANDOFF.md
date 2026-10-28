@@ -62,3 +62,5 @@ Android incorrect/unanswered retry callbacks now work from result buttons, suppr
 ## Series and photo/text authoring
 
 The web student library now groups published tests by subject/session and offers cursor-paged discovery, start/resume and results. Staff have a guided photo/paste → review → draft-test shortcut, with CSV/Excel as another entry point. Jobs persist in MongoDB with bounded slots, leases and fenced worker completion. Photo extraction needs real private storage plus OCR/vision configuration; the paste template works without AI keys. Source evidence is readable by administrators for independent review and retained seven days. Run migrations and the separate production worker. See SERIES_AND_QUESTION_IMPORT.md for setup, API bounds and remaining provider/staging acceptance.
+
+For the subject dropdown, use **Set up BSEB subjects & paper layouts**, or add your own subject/chapter inline and type a topic. See [BSEB patterns and free photo OCR](BSEB_REFERENCE_AND_SETUP.md). Default printed-photo OCR no longer needs a paid provider or object storage; cloud mode still does. Review 2026 reference layouts against the intended exam year before approving them.

@@ -394,6 +394,14 @@ test("series discovery scopes publication/class and paginates without answer key
     { _id: ids[0]._id },
     { $set: { "data.academic.chapterId": String(chapter._id) } },
   );
+  await m.TestModel.updateOne(
+    { _id: ids[2]._id },
+    { $set: { "data.academic.topic": "Linear equations" } },
+  );
+  await m.TestModel.updateOne(
+    { _id: ids[3]._id },
+    { $set: { "data.mode": "BOARD" } },
+  );
   const outsider = await m.Academic.create({
     kind: "SUBJECT",
     name: "Other class",
@@ -462,6 +470,20 @@ test("series discovery scopes publication/class and paginates without answer key
     scopedChapter.data.chapters[0].title,
     "Teacher supplied chapter",
   );
+  for (const [kind, expected] of [
+    ["CHAPTER", ids[0]._id],
+    ["TOPIC", ids[2]._id],
+    ["FULL_MOCK", ids[3]._id],
+  ]) {
+    const filtered = await call(
+      `/test-series/${academic.subjectId}/tests?kind=${kind}`,
+      undefined,
+      studentToken,
+    );
+    assert.equal(filtered.status, 200);
+    assert.equal(filtered.data.rows.length, 1);
+    assert.equal(filtered.data.rows[0].id, String(expected));
+  }
   const literal = await call(
     `/test-series/${academic.subjectId}/tests?q=${encodeURIComponent(".*")}`,
     undefined,
@@ -490,6 +512,186 @@ test("series discovery scopes publication/class and paginates without answer key
         studentToken,
       )
     ).status,
+    400,
+  );
+});
+
+test("BSEB setup fills empty session subjects idempotently with editable draft layouts and independent review", async () => {
+  const scope = { session: "2027-28", classLevel: "10", stream: "GENERAL" };
+  assert.equal(
+    (await call("/admin/bseb/setup", scope, studentToken)).status,
+    403,
+  );
+  const first = await call("/admin/bseb/setup", scope, adminToken);
+  assert.equal(first.status, 200);
+  assert.equal(first.data.createdSubjects, 9);
+  assert.equal(first.data.createdPatterns, 6);
+  const second = await call("/admin/bseb/setup", scope, otherToken);
+  assert.equal(second.data.createdSubjects, 0);
+  assert.equal(second.data.createdPatterns, 0);
+  const math = first.data.subjects.find((s) => s.name === "Mathematics");
+  const pattern = await m.Pattern.findOne({
+    "data.academic.subjectId": math.id,
+  });
+  assert.equal(pattern.status, "DRAFT");
+  assert.equal(pattern.data.totalMarks, 100);
+  assert.equal(pattern.data.readingMinutes, 15);
+  assert.equal(pattern.data.sections[0].offered, 100);
+  assert.equal(pattern.data.sections[0].answerCount, 50);
+  assert.equal(
+    (await call(`/admin/patterns/${pattern._id}/publish`, {}, adminToken))
+      .status,
+    400,
+  );
+  assert.equal(
+    (await call(`/admin/patterns/${pattern._id}/publish`, {}, reviewerToken))
+      .status,
+    200,
+  );
+  await m.Pattern.updateOne(
+    { _id: pattern._id },
+    { $set: { "data.title": "Teacher corrected layout" } },
+  );
+  await call("/admin/bseb/setup", scope, otherToken);
+  assert.equal(
+    (await m.Pattern.findById(pattern._id)).data.title,
+    "Teacher corrected layout",
+  );
+  const list = await call(
+    `/admin/academics?session=${scope.session}&classLevel=10&stream=GENERAL`,
+    undefined,
+    otherToken,
+  );
+  assert.equal(list.data.length, 9);
+  assert.ok(list.data.every((s) => !s.verified && s.session === scope.session));
+  const series = (await call("/test-series", undefined, studentToken)).data;
+  assert.equal(series.find((s) => s.id === math.id).testCount, 0);
+  const details = await call(
+    `/test-series/${math.id}/tests`,
+    undefined,
+    studentToken,
+  );
+  assert.equal(details.data.paper.label, "Approved session layout");
+  assert.equal(details.data.rows.length, 0);
+  const science = (
+    await call(
+      "/admin/bseb/catalog?session=2026-27&classLevel=12&stream=SCIENCE",
+      undefined,
+      otherToken,
+    )
+  ).data;
+  assert.equal(
+    science.subjects.find((s) => s.name === "Physics").theoryMarks,
+    70,
+  );
+  assert.equal(
+    science.subjects.some((s) => s.name === "History"),
+    false,
+  );
+  assert.equal(
+    (
+      await call(
+        "/admin/bseb/setup",
+        { ...scope, classLevel: "12" },
+        otherToken,
+      )
+    ).status,
+    400,
+  );
+});
+
+test("a full BSEB Mathematics mock enforces offered/attempt counts and includes the reading period in its deadline", async () => {
+  const pattern = await m.Pattern.findOne({
+    "data.title": "Teacher corrected layout",
+  }).lean();
+  const data = pattern.data;
+  const sections = [];
+  for (const section of data.sections) {
+    const questions = await m.QuestionModel.insertMany(
+      Array.from({ length: section.offered }, (_, i) => ({
+        hash: `board-fixture-${section.id}-${i}`,
+        status: "PUBLISHED",
+        creator: String(other._id),
+        reviewer: String(owner._id),
+        data: {
+          academic: data.academic,
+          text: `Fixture ${section.id} item ${i + 1}`,
+          type: section.types[0],
+          maximumMarks: section.marksEach,
+          negativeMarks: 0,
+          language: "en",
+          options:
+            section.types[0] === "SINGLE_CHOICE"
+              ? [
+                  { id: "a", text: "One" },
+                  { id: "b", text: "Two" },
+                ]
+              : [],
+          correct: section.types[0] === "SINGLE_CHOICE" ? ["a"] : [],
+          referenceAnswer: "Teacher fixture reference",
+          rubric:
+            section.types[0] === "SINGLE_CHOICE"
+              ? []
+              : [
+                  {
+                    id: "r",
+                    name: "Correct working",
+                    maximumMarks: section.marksEach,
+                  },
+                ],
+        },
+      })),
+    );
+    sections.push({
+      id: section.id,
+      title: section.title,
+      questionIds: questions.map((q) => String(q._id)),
+      drawCount: section.offered,
+      maxAnswers: section.answerCount,
+      allowedTypes: section.types,
+      choicePolicy: "FIRST_IN_PAPER",
+    });
+  }
+  const created = await call("/admin/tests", {
+    title: "Full Mathematics reference fixture",
+    description: "Fixture content, not a real board paper",
+    academic: data.academic,
+    mode: "BOARD",
+    durationMinutes: data.durationMinutes,
+    readingMinutes: data.readingMinutes,
+    patternId: String(pattern._id),
+    officialSource: data.officialSource,
+    verifiedAt: data.verifiedAt,
+    sections,
+  });
+  assert.equal(created.status, 201);
+  assert.equal(
+    (await call(`/admin/tests/${created.data._id}/publish`, {})).status,
+    200,
+  );
+  const started = await call(
+    `/tests/${created.data._id}/start`,
+    {},
+    studentToken,
+  );
+  assert.equal(started.status, 201);
+  assert.equal(started.data.questions.length, 138);
+  assert.equal(
+    new Date(started.data.deadline) - new Date(started.data.startedAt),
+    195 * 60000,
+  );
+  assert.equal(
+    new Date(started.data.readUntil) - new Date(started.data.startedAt),
+    15 * 60000,
+  );
+  assert.equal(started.data.snapshot.sections[0].maxAnswers, 50);
+  const wrong = await call("/admin/tests", {
+    ...created.data.data,
+    title: "Invalid choice policy fixture",
+    sections: sections.map((s) => ({ ...s, choicePolicy: "LIMIT_ANSWERS" })),
+  });
+  assert.equal(
+    (await call(`/admin/tests/${wrong.data._id}/publish`, {})).status,
     400,
   );
 });

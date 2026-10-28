@@ -1,7 +1,8 @@
+import { PaperGuide } from "./paper-guide";
 import { tr, useLanguage } from "@boardtestify/i18n";
 import { useState } from "react";
 import { useLoad, Notice } from "./main";
-import { uploadFile } from "./api";
+import { request, uploadFile } from "./api";
 export const types = [
   "SINGLE_CHOICE",
   "MULTIPLE_CHOICE",
@@ -16,9 +17,74 @@ export const typeLabels = {
   LONG_ANSWER: "Long answer",
   NUMERICAL: "Numerical answer",
 };
-export function AcademicPicker({ value, onChange }) {
+export function AcademicPicker({
+  value,
+  onChange,
+  onSetup,
+  showPattern = false,
+}) {
   useLanguage();
-  const { data, error } = useLoad("/admin/academics");
+  const { data, error, reload } = useLoad(
+    `/admin/academics?${new URLSearchParams({ session: value.session, classLevel: value.classLevel, stream: value.stream })}`,
+  );
+  const [adding, setAdding] = useState(""),
+    [newName, setNewName] = useState(""),
+    [saving, setSaving] = useState(false),
+    [setupError, setSetupError] = useState(""),
+    [setupMessage, setSetupMessage] = useState("");
+  async function setup() {
+    setSaving(true);
+    setSetupError("");
+    try {
+      await request("/admin/bseb/setup", {
+        session: value.session,
+        classLevel: value.classLevel,
+        stream: value.stream,
+      });
+      reload();
+      onSetup?.();
+      setSetupMessage(
+        "Subjects and draft paper layouts are ready. Select your subject; add chapters and topics yourself. Layouts need review before publication.",
+      );
+    } catch (e) {
+      setSetupError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function addRecord() {
+    if (!newName.trim()) {
+      setSetupError("Enter a name.");
+      return;
+    }
+    setSaving(true);
+    setSetupError("");
+    try {
+      const record = await request("/admin/academics", {
+        session: value.session,
+        classLevel: value.classLevel,
+        stream: value.stream,
+        kind: adding,
+        name: newName.trim(),
+        ...(adding === "CHAPTER" ? { parentId: value.subjectId } : {}),
+        syllabusVersion: `Staff-entered ${value.session}`,
+        verified: false,
+        active: true,
+      });
+      onChange(
+        adding === "SUBJECT"
+          ? { ...value, subjectId: record._id, chapterId: undefined, topic: "" }
+          : { ...value, chapterId: record._id, topic: "" },
+      );
+      reload();
+      setAdding("");
+      setNewName("");
+    } catch (e) {
+      setSetupError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
   const records = data || [];
   function set(key, v) {
     const next = {
@@ -28,9 +94,13 @@ export function AcademicPicker({ value, onChange }) {
     if (["classLevel", "stream", "session"].includes(key)) {
       next.subjectId = "";
       delete next.chapterId;
+      delete next.topic;
     }
     if (key === "classLevel") next.stream = v === "10" ? "GENERAL" : "SCIENCE";
-    if (key === "subjectId") delete next.chapterId;
+    if (key === "subjectId") {
+      delete next.chapterId;
+      delete next.topic;
+    }
     onChange(next);
   }
   const subjects = records.filter(
@@ -142,8 +212,103 @@ export function AcademicPicker({ value, onChange }) {
           />
         </label>
       </div>
+      {showPattern &&
+        value.subjectId &&
+        /^\d{4}-\d{2}$/.test(value.session) && (
+          <AcademicReference
+            academic={value}
+            subject={subjects.find((s) => s._id === value.subjectId)}
+          />
+        )}
+      <div className="academic-quick-add">
+        {!subjects.length && (
+          <p className="notice">
+            {tr(
+              "No subjects exist for this session, class and stream. Add them below to continue.",
+            )}
+          </p>
+        )}
+        <div className="row wrap">
+          <button
+            type="button"
+            className="button subtle"
+            disabled={saving}
+            onClick={setup}
+          >
+            {tr("Set up BSEB subjects & paper layouts")}
+          </button>
+          <button
+            type="button"
+            className="button ghost"
+            disabled={saving}
+            onClick={() => {
+              setAdding("SUBJECT");
+              setNewName("");
+            }}
+          >
+            {tr("+ Add subject")}
+          </button>
+          <button
+            type="button"
+            className="button ghost"
+            disabled={saving || !value.subjectId}
+            onClick={() => {
+              setAdding("CHAPTER");
+              setNewName("");
+            }}
+          >
+            {tr("+ Add chapter")}
+          </button>
+        </div>
+        {adding && (
+          <div className="panel inline-academic-form">
+            <label>
+              {tr(
+                adding === "SUBJECT" ? "New subject name" : "New chapter name",
+              )}
+              <input
+                autoFocus
+                maxLength={200}
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+              />
+            </label>
+            <div className="row wrap">
+              <button
+                type="button"
+                className="button primary"
+                disabled={saving}
+                onClick={addRecord}
+              >
+                {tr("Save and select")}
+              </button>
+              <button
+                type="button"
+                className="button ghost"
+                disabled={saving}
+                onClick={() => setAdding("")}
+              >
+                {tr("Cancel")}
+              </button>
+            </div>
+          </div>
+        )}
+        <Notice error>{setupError}</Notice>
+        <Notice>{setupMessage}</Notice>
+      </div>
     </>
   );
+}
+function AcademicReference({ academic, subject }) {
+  const { data } = useLoad(
+    `/admin/bseb/catalog?${new URLSearchParams({ session: academic.session, classLevel: academic.classLevel, stream: academic.stream })}`,
+  );
+  const reference = data?.subjects.find(
+    (s) =>
+      s.key === subject?.boardSubjectKey ||
+      s.name.toLowerCase() === subject?.name.toLowerCase(),
+  );
+  return <PaperGuide paper={reference} />;
 }
 export function QuestionForm({ value: q, onChange, hideAcademic = false }) {
   useLanguage();
@@ -593,7 +758,7 @@ export function TestForm({ value: d, onChange }) {
       ...d,
       [key]: v,
     });
-  const { data: patterns } = useLoad("/admin/patterns");
+  const { data: patterns, reload: reloadPatterns } = useLoad("/admin/patterns");
   const { data: bank, error } = useLoad(
     `/admin/questions?status=PUBLISHED&page=${page}${d.academic.subjectId ? `&subjectId=${d.academic.subjectId}` : ""}`,
   );
@@ -652,6 +817,8 @@ export function TestForm({ value: d, onChange }) {
         />
       </label>
       <AcademicPicker
+        showPattern
+        onSetup={reloadPatterns}
         value={d.academic}
         onChange={(academic) =>
           onChange({
@@ -719,7 +886,7 @@ export function TestForm({ value: d, onChange }) {
       </div>
       {d.mode === "BOARD" && (
         <label>
-          {tr("Approved official pattern")}
+          {tr("Paper layout · drafts need independent approval")}
           <select
             value={d.patternId || ""}
             onChange={(e) => applyPattern(e.target.value)}
@@ -729,14 +896,14 @@ export function TestForm({ value: d, onChange }) {
               patterns
                 ?.filter(
                   (p) =>
-                    p.status === "PUBLISHED" &&
+                    ["PUBLISHED", "DRAFT"].includes(p.status) &&
                     p.data.academic.subjectId === d.academic.subjectId,
                 )
                 .map((p) => (
                   <option key={p._id} value={p._id}>
                     {tr(p.data.title)}
                     {tr(" \xB7 ")}
-                    {tr(p.data.versionLabel)}
+                    {tr(p.data.versionLabel)} · {tr(p.status)}
                   </option>
                 )),
             )}

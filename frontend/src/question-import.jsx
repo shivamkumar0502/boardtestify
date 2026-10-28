@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { tr, useLanguage } from "@boardtestify/i18n";
 import { questionSchema } from "@boardtestify/domain";
+import { readPrintedPhoto } from "./local-ocr";
 import { AcademicPicker, QuestionForm } from "./authoring";
 import { useLoad, Notice } from "./main";
 import { request, uploadFile } from "./api";
@@ -33,6 +34,22 @@ export function QuestionImport({ onSaved, onCSV, initialJobId = "" }) {
   const [advancedQuestion, setAdvancedQuestion] = useState(false);
   const [showSource, setShowSource] = useState(true);
   const loaded = useRef("");
+  const ocrAbort = useRef(null),
+    photoTextPending = useRef(false);
+  const [localSourceJobId, setLocalSourceJobId] = useState("");
+  const [photoEngine, setPhotoEngine] = useState("LOCAL"),
+    [ocrProgress, setOCRProgress] = useState(""),
+    [photoPreview, setPhotoPreview] = useState("");
+  useEffect(() => () => ocrAbort.current?.abort(), []);
+  useEffect(() => {
+    const url = file ? URL.createObjectURL(file) : "";
+    setPhotoPreview(url);
+    setLocalSourceJobId("");
+    photoTextPending.current = false;
+    return () => {
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [file]);
   useEffect(() => setAdvancedQuestion(false), [index, jobId]);
   function editQuestion(patch) {
     setQuestions((old) =>
@@ -106,12 +123,32 @@ export function QuestionImport({ onSaved, onCSV, initialJobId = "" }) {
     setBusy(true);
     try {
       const meta = { academic, language, sourceTitle };
+      if (method === "PHOTO" && photoEngine === "LOCAL") {
+        ocrAbort.current = new AbortController();
+        setOCRProgress("Reading printed text…");
+        const result = await readPrintedPhoto(
+          file,
+          language,
+          (percent, status) => setOCRProgress(`${status} · ${percent}%`),
+          ocrAbort.current.signal,
+        );
+        setText(result.text);
+        photoTextPending.current = true;
+        setMethod("TEXT");
+        setMessage(
+          "Photo text is ready. Correct OCR mistakes below, then format questions. Check equations and option order carefully.",
+        );
+        return;
+      }
       const d =
         method === "PHOTO"
           ? await uploadFile("/admin/question-imports/photo", file, {
               meta: JSON.stringify(meta),
             })
           : await request("/admin/question-imports/text", { ...meta, text });
+      if (method === "TEXT" && photoTextPending.current)
+        setLocalSourceJobId(d.id);
+      photoTextPending.current = false;
       setJobId(d.id);
       setRefresh((v) => v + 1);
       history.reload();
@@ -119,6 +156,7 @@ export function QuestionImport({ onSaved, onCSV, initialJobId = "" }) {
       setError(e.message);
     } finally {
       setBusy(false);
+      setOCRProgress("");
     }
   }
   async function retry() {
@@ -229,12 +267,51 @@ export function QuestionImport({ onSaved, onCSV, initialJobId = "" }) {
               accept="image/jpeg,image/png,image/webp"
               onChange={(e) => setFile(e.target.files?.[0] || null)}
             />
-            {!features.data?.questionPhotoImport && (
+            {photoPreview && (
+              <img
+                className="source-photo-preview"
+                src={photoPreview}
+                alt={tr("Selected book photo")}
+              />
+            )}
+            <label>
+              {tr("Photo reader")}
+              <select
+                value={photoEngine}
+                onChange={(e) => setPhotoEngine(e.target.value)}
+                disabled={busy}
+              >
+                <option value="LOCAL">
+                  {tr("Free printed-text OCR · this device")}
+                </option>
+                <option
+                  value="CLOUD"
+                  disabled={!features.data?.questionPhotoImport}
+                >
+                  {tr("Cloud vision · requires configured provider")}
+                </option>
+              </select>
+            </label>
+            <p className="small muted">
+              {tr(
+                "Free OCR reads printed Hindi and English on your device. Crop one column; equations, handwriting and diagrams need manual review. The photo stays on this device.",
+              )}
+            </p>
+            {photoEngine === "CLOUD" && (
               <Notice>
                 {tr(
-                  "Photo extraction needs private storage plus OCR or vision AI. Pasted questions work without AI keys.",
+                  "Cloud extraction uploads the photo to configured private storage and the OCR/AI provider.",
                 )}
               </Notice>
+            )}
+            {ocrProgress && <p role="status">{ocrProgress}</p>}
+            {busy && photoEngine === "LOCAL" && (
+              <button
+                className="button ghost"
+                onClick={() => ocrAbort.current?.abort()}
+              >
+                {tr("Cancel photo reading")}
+              </button>
             )}
           </>
         ) : (
@@ -256,11 +333,18 @@ export function QuestionImport({ onSaved, onCSV, initialJobId = "" }) {
         <button
           className="button primary"
           disabled={
-            busy || (method === "PHOTO" && !features.data?.questionPhotoImport)
+            busy ||
+            (method === "PHOTO" &&
+              photoEngine === "CLOUD" &&
+              !features.data?.questionPhotoImport)
           }
           onClick={extract}
         >
-          {busy ? tr("Working…") : tr("Extract questions")}
+          {busy
+            ? tr("Working…")
+            : method === "PHOTO" && photoEngine === "LOCAL"
+              ? tr("Read photo for free")
+              : tr("Format questions")}
         </button>
       </div>
       <Notice error>{error || job?.error}</Notice>
@@ -276,6 +360,16 @@ export function QuestionImport({ onSaved, onCSV, initialJobId = "" }) {
                 "Your import is queued or processing. You can leave this page and open it from recent imports.",
               )}
             </p>
+          )}
+          {localSourceJobId === jobId && photoPreview && !job.sourceURL && (
+            <details>
+              <summary>{tr("Compare selected photo · this device")}</summary>
+              <img
+                className="source-photo-preview"
+                src={photoPreview}
+                alt={tr("Selected book photo")}
+              />
+            </details>
           )}
           {job.sourceURL && (
             <details>
