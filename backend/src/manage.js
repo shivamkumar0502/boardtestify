@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { env } from "./config.js";
 import { connect, User, Academic, QuestionModel, TestModel } from "./models.js";
 import { hash } from "./lib.js";
+import { seedOriginalPractice } from "./practice-packs.js";
 import { seedBSEB } from "./seed-bseb.js";
 await connect(env.MONGODB_URI);
 try {
@@ -32,6 +33,8 @@ try {
       { upsert: true },
     );
     console.log("Administrator created/updated. No credentials were logged.");
+  } else if (process.argv[2] === "seed:practice") {
+    console.log(JSON.stringify(await seedOriginalPractice()));
   } else if (process.argv[2] === "seed:bseb") {
     console.log(JSON.stringify(await seedBSEB()));
   } else if (process.argv[2] === "seed") {

@@ -144,3 +144,45 @@ test("staff see release configuration gaps without exposing service keys", async
     fullPage: true,
   });
 });
+
+test("administrator imports original test drafts from the pack library without a terminal", async ({
+  page,
+}) => {
+  await login(page, "reviewer@fixture.example");
+  await page.getByRole("button", { name: "Tests", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Add practice tests" }),
+  ).toBeVisible();
+  const card = page
+    .locator(".admin-row")
+    .filter({
+      has: page.getByRole("heading", {
+        name: "Original academic practice pack",
+        exact: true,
+      }),
+    });
+  await card.getByRole("button", { name: "Import draft pack" }).click();
+  await expect(
+    page.getByText(
+      "Pack ready: 8 tests, 80 questions. Review drafts before publication.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "Mathematics · Linear equations · original practice",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await card.getByRole("button", { name: "Import draft pack" }).click();
+  await expect(
+    page.getByText(
+      "Pack ready: 8 tests, 80 questions. Review drafts before publication.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "Mathematics · Linear equations · original practice",
+      exact: true,
+    }),
+  ).toHaveCount(1);
+});

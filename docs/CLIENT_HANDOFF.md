@@ -52,3 +52,9 @@ See OPERATIONS.md for the Linux Docker API/worker setup, PDF host requirements, 
 ## BSEB source-based practice pack
 
 Five bilingual mini-test drafts / fifteen adapted MCQs can be inserted with `npm run seed:bseb` after migrations. Full official paper links and per-question source pages are retained. Teachers must check the suggested keys and approve questions before publishing the tests. The historical 2025–26 scope is preserved. See BSEB_TEST_PACK.md. This is not a complete official question bank or current-session release approval.
+
+## Practice library and Android result fixes
+
+Administration → Tests can import the five BSEB source-linked mini drafts or eight original practice drafts without shell access (13 tests/95 questions in total). Imports require an administrator and preserve existing edits/publication. Review suggested keys and publish before student access. Original questions are not official BSEB content or verified syllabus coverage.
+
+Android incorrect/unanswered retry callbacks now work from result buttons, suppress duplicate taps and surface API failures. Saved answer-photo/PDF-page evidence is rendered in native results, and section-choice exclusions show as not counted. Native billing/distribution choices, paid-provider acceptance and physical-device release testing remain external release work.

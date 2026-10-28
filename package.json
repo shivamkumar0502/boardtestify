@@ -30,7 +30,8 @@
     "preflight": "node --env-file-if-exists=.env scripts/preflight.mjs",
     "db:backup": "node --env-file-if-exists=.env scripts/database.mjs backup",
     "db:restore-drill": "node --env-file-if-exists=.env scripts/database.mjs restore-drill",
-    "seed:bseb": "npm run seed:bseb -w @boardtestify/api"
+    "seed:bseb": "npm run seed:bseb -w @boardtestify/api",
+    "seed:practice": "npm run seed:practice -w @boardtestify/api"
   },
   "devDependencies": {
     "@playwright/test": "1.56.1",

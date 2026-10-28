@@ -2,15 +2,15 @@
 
 Local checks on 28 October 2026. These results concern the repository source and disposable test fixtures, not an activated production deployment.
 
-| Check                                                        | Result                                        |
-| ------------------------------------------------------------ | --------------------------------------------- |
-| JavaScript syntax and no TypeScript source (`npm run check`) | Pass                                          |
-| Domain/scoring/locale tests (`npm test`)                     | 113 passed (MongoDB Database Tools installed) |
-| MongoDB/API integration (`npm run test:integration`)         | 13 passed (MongoDB Database Tools installed)  |
-| React production build                                       | Pass                                          |
-| Expo Android JS/Hermes bundle export                         | Pass; not a signed APK/AAB                    |
+| Check                                                        | Result                                                 |
+| ------------------------------------------------------------ | ------------------------------------------------------ |
+| JavaScript syntax and no TypeScript source (`npm run check`) | Pass                                                   |
+| Domain/scoring/locale tests (`npm test`)                     | 116 passed; optional backup-tools case skipped locally |
+| MongoDB/API integration (`npm run test:integration`)         | 16 passed; optional backup-tools case skipped locally  |
+| React production build                                       | Pass                                                   |
+| Expo Android JS/Hermes bundle export                         | Pass; not a signed APK/AAB                             |
 
-Browser acceptance: 10 tests passed across desktop Chrome and Pixel 5 mobile-web emulation. They cover Hindi registration/dashboard/exam, visual question creation, blocked self-approval, second-reviewer publication, visual test creation, persisted/reloaded answers, submission/results and narrow-screen layout. The PDF flow includes a real two-page upload, ordered private previews, refresh with restored pages, and final submission. The staff configuration checklist is also exercised. Hindi fonts are bundled with the website, including offline exam use.
+Browser acceptance: 12 tests passed across desktop Chrome and Pixel 5 mobile-web emulation. They cover Hindi registration/dashboard/exam, visual question creation, blocked self-approval, second-reviewer publication, visual test creation, persisted/reloaded answers, submission/results and narrow-screen layout. The PDF flow includes a real two-page upload, ordered private previews, refresh with restored pages, and final submission. The staff configuration checklist is also exercised. Hindi fonts are bundled with the website, including offline exam use.
 
 Integration coverage includes authorization, independent publication, source-backed pattern validation, private image validation, OCR/vision review fallback, one-use OTP challenges, captured one-time/recurring payments, cancellation/full refunds/replay, reading time, internal choices, concurrent answer conflicts, shared rate windows, overload gates, fenced evaluation lease recovery and database outage/reconnect without loss of saved answers. External paid providers use controlled adapter responses; no live charge/SMS or provider acceptance claim follows from those tests.
 
@@ -26,7 +26,7 @@ The isolated benchmark uses a local disposable MongoDB, two HTTP listeners in **
 | Requests                                              | 1,200                                    |
 | Duration / request rate                               | 6.14 seconds / 195.6 requests per second |
 | Request latency p50 / p95                             | 226.5 ms / 346.5 ms                      |
-| Maximum event-loop delay                              | 81.5 ms                                 |
+| Maximum event-loop delay                              | 81.5 ms                                  |
 | Attempts with every expected answer and correct score | 100                                      |
 | Request/data-integrity errors                         | 0                                        |
 
@@ -47,3 +47,9 @@ PDF tests exercise actual Poppler rendering, ordered/bounded JPEG pages, malform
 A real `mongodump`/`mongorestore` 100.13.0 fixture verifies BSON/date/Hindi text and indexes, independent source and restore counts, checksum rejection and refusal to overwrite backups. This optional integration scenario skips when MongoDB tools are absent; CI installs a pinned/checksummed tool bundle. It is not a production backup restoration.
 
 The production-only workspace dependency installation and Sharp runtime check passed. Docker is unavailable in the local environment; the added container CI job must build/exercise the actual image. Expo export includes the document picker and recovery UI; physical-device acceptance remains pending.
+
+## Practice import and native result regression
+
+The admin pack browser flow covers importing/re-importing original draft tests without a terminal on desktop and mobile web. API tests reject student/editor import, validate 80 original bilingual questions and arithmetic keys, keep all generated content unpublished, preserve teacher edits and record the importing administrator. Original questions are illustrative, not an official board paper or verified syllabus. Imports use bounded batches to reduce serial Atlas round-trips.
+
+Native result handler tests execute the compiled component with controlled hooks/API responses: both retry buttons call the correct filter and navigate, simultaneous taps issue one request, failures display without navigation, saved pages render and section-choice exclusions are labelled. Expo Android bundle export passed. This is not physical-device or store-billing acceptance.
