@@ -181,6 +181,15 @@ export async function validatePatternForTest(d, questions) {
       400,
       "Section choices/counts do not match pattern",
     );
+    if (
+      pattern.versionLabel ===
+      "BSEB model paper 2026 · review for selected session"
+    )
+      assert(
+        section.choicePolicy === "FIRST_IN_PAPER",
+        400,
+        "BSEB reference layouts evaluate the first answered items in paper order",
+      );
     const rows = questions.filter((q) =>
       section.questionIds.includes(String(q._id)),
     );

@@ -1,3 +1,4 @@
+import { bsebSetup } from "./bseb-setup.js";
 import { packRoutes } from "./pack-routes.js";
 import { series } from "./series.js";
 import { authoring } from "./authoring-routes.js";
@@ -31,8 +32,13 @@ app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
-        "script-src": ["'self'", "https://checkout.razorpay.com"],
-        "img-src": ["'self'", "data:", "https:"],
+        "script-src": [
+          "'self'",
+          "https://checkout.razorpay.com",
+          "'wasm-unsafe-eval'",
+        ],
+        "img-src": ["'self'", "data:", "blob:", "https:"],
+        "worker-src": ["'self'"],
         "connect-src": ["'self'", env.WEB_ORIGIN, "https://api.razorpay.com"],
         "frame-src": [
           "https://api.razorpay.com",
@@ -75,6 +81,7 @@ app.use(
   "/api",
   integrations,
   authoring,
+  bsebSetup,
   series,
   packRoutes,
   billing,

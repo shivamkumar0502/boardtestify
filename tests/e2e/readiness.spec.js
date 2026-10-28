@@ -20,7 +20,7 @@ test("Hindi registration and dashboard work without translating stored enum valu
   ).toBeVisible();
   await page.getByRole("link", { name: "टेस्ट देखें", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "अगला अभ्यास चुनें." }),
+    page.getByRole("heading", { name: "BSEB टेस्ट सीरीज़." }),
   ).toBeVisible();
   await page
     .locator(".test-card")
@@ -208,7 +208,7 @@ test("staff turn pasted questions into an editable draft test without JSON", asy
     .getByLabel("Paste question text")
     .fill("1. Evaluate 4 + 5.\nA) 8\nB) 9\nC) 10\nD) 11\nAnswer: B");
   await page
-    .getByRole("button", { name: "Extract questions", exact: true })
+    .getByRole("button", { name: "Format questions", exact: true })
     .click();
   await expect(
     page.getByRole("textbox", { name: "Question text", exact: true }),
@@ -273,4 +273,175 @@ test("manual test validation asks for subject and questions without raw JSON err
       { exact: true },
     ),
   ).toBeVisible();
+});
+
+test("empty academic selection supports BSEB setup and inline custom subject/chapter", async ({
+  page,
+}, info) => {
+  await login(page, "author@fixture.example");
+  await page
+    .getByRole("button", {
+      name: "Create test from photo or text",
+      exact: true,
+    })
+    .click();
+  await page
+    .getByLabel("Academic session", { exact: true })
+    .fill(info.project.name === "desktop" ? "2030-31" : "2031-32");
+  await expect(
+    page.getByText(
+      "No subjects exist for this session, class and stream. Add them below to continue.",
+    ),
+  ).toBeVisible();
+  await page
+    .getByRole("button", {
+      name: "Set up BSEB subjects & paper layouts",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page
+      .getByRole("combobox", { name: "Subject", exact: true })
+      .locator("option", { hasText: /^Science$/ }),
+  ).toHaveCount(1);
+  await page
+    .getByRole("button", { name: "+ Add subject", exact: true })
+    .click();
+  await page
+    .getByLabel("New subject name", { exact: true })
+    .fill("Teacher's custom subject");
+  await page
+    .getByRole("button", { name: "Save and select", exact: true })
+    .click();
+  await expect(
+    page
+      .getByRole("combobox", { name: "Subject", exact: true })
+      .locator("option:checked"),
+  ).toHaveText("Teacher's custom subject");
+  await page
+    .getByRole("button", { name: "+ Add chapter", exact: true })
+    .click();
+  await page
+    .getByLabel("New chapter name", { exact: true })
+    .fill("Teacher's chapter one");
+  await page
+    .getByRole("button", { name: "Save and select", exact: true })
+    .click();
+  await expect(
+    page
+      .getByRole("combobox", { name: "Chapter", exact: true })
+      .locator("option:checked"),
+  ).toHaveText("Teacher's chapter one");
+  await page
+    .getByLabel("Topic", { exact: true })
+    .fill("Topic entered by staff");
+  await page.screenshot({
+    path: info.outputPath("inline-academic-setup.png"),
+    fullPage: true,
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});
+
+test("real local photo OCR works without paid provider and produces editable MCQs", async ({
+  page,
+}, info) => {
+  test.setTimeout(90000);
+  await login(page, "author@fixture.example");
+  await page
+    .getByRole("button", {
+      name: "Create test from photo or text",
+      exact: true,
+    })
+    .click();
+  await page
+    .getByRole("combobox", { name: "Subject", exact: true })
+    .selectOption({ label: "Mathematics · sample practice" });
+  await page.getByLabel("Source / book name").fill("Printed local OCR fixture");
+  await page.getByRole("button", { name: "Book photo", exact: true }).click();
+  const hindi = info.project.name === "mobile-web";
+  if (hindi)
+    await page
+      .getByRole("combobox", { name: "Question language", exact: true })
+      .selectOption("hi");
+  const png = await page.evaluate(async (hindi) => {
+    if (hindi) await document.fonts.load("48px 'Noto Sans Devanagari'");
+    const canvas = document.createElement("canvas");
+    canvas.width = 1400;
+    canvas.height = 800;
+    const c = canvas.getContext("2d");
+    c.fillStyle = "white";
+    c.fillRect(0, 0, 1400, 800);
+    c.fillStyle = "black";
+    c.font = hindi ? "48px 'Noto Sans Devanagari'" : "48px Arial";
+    (hindi
+      ? [
+          "1. भारत की राजधानी क्या है?",
+          "A) Delhi",
+          "B) Patna",
+          "C) Ranchi",
+          "D) Jaipur",
+        ]
+      : ["1. What is 2 + 3?", "A) Four", "B) Five", "C) Six", "D) Seven"]
+    ).forEach((line, i) => c.fillText(line, 80, 110 + i * 110));
+    return canvas.toDataURL("image/png").split(",")[1];
+  }, hindi);
+  const external = [];
+  page.on("request", (req) => {
+    if (
+      !req.url().startsWith("http://127.0.0.1:4173") &&
+      /^https?:/.test(req.url())
+    )
+      external.push(req.url());
+  });
+  await page.getByLabel("Book page photo", { exact: true }).setInputFiles({
+    name: "printed.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(png, "base64"),
+  });
+  await page
+    .getByRole("button", { name: "Read photo for free", exact: true })
+    .click();
+  await expect(page.getByLabel("Paste question text")).toHaveValue(
+    hindi ? /भारत/ : /What is 2 \+ 3/,
+    { timeout: 60000 },
+  );
+  if (hindi) {
+    const extracted = await page.getByLabel("Paste question text").inputValue();
+    // The real Hindi OCR sometimes reads the printed 1. as L.; staff corrects it.
+    await page
+      .getByLabel("Paste question text")
+      .fill(extracted.replace(/^[LIil][.]\s*/, "1. "));
+  }
+  await page
+    .getByRole("button", { name: "Format questions", exact: true })
+    .click();
+  await expect(
+    page.getByRole("textbox", { name: "Question text", exact: true }),
+  ).toHaveValue(hindi ? /भारत/ : /What is 2 \+ 3/, { timeout: 20000 });
+  await expect(
+    page.getByRole("textbox", { name: "Option 2", exact: true }),
+  ).toHaveValue(hindi ? "Patna" : "Five");
+  await expect(
+    page.getByRole("combobox", { name: "Correct answer", exact: true }),
+  ).toHaveValue("");
+  await page
+    .getByRole("combobox", { name: "Correct answer", exact: true })
+    .selectOption(hindi ? "a" : "b");
+  await page
+    .getByRole("textbox", { name: "Question text", exact: true })
+    .fill(hindi ? "भारत की राजधानी क्या है?" : "What is 2 + 3?");
+  expect(external).toEqual([]);
+  await page.screenshot({
+    path: info.outputPath("real-photo-ocr-review.png"),
+    fullPage: true,
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
 });

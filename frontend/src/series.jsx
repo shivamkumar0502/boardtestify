@@ -1,3 +1,4 @@
+import { PaperGuide } from "./paper-guide";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { tr, useLanguage } from "@boardtestify/i18n";
@@ -7,6 +8,11 @@ export function SeriesLibrary() {
   useLanguage();
   const { data: groups, error } = useLoad("/test-series");
   const billing = useLoad("/billing");
+  const guide = useLoad("/test-series/board-guide");
+  const [subjectSearch, setSubjectSearch] = useState(""),
+    [session, setSession] = useState(""),
+    [kind, setKind] = useState("");
+  const [paper, setPaper] = useState(null);
   const [params, setParams] = useSearchParams(),
     selected = params.get("series") || "";
   const [chapter, setChapter] = useState("");
@@ -29,11 +35,13 @@ export function SeriesLibrary() {
     return () => clearTimeout(t);
   }, [query]);
   const path = selected
-    ? `/test-series/${encodeURIComponent(selected)}/tests?${new URLSearchParams({ ...(mode ? { mode } : {}), ...(chapter ? { chapterId: chapter } : {}), ...(access ? { access } : {}), ...(search ? { q: search } : {}) })}`
+    ? `/test-series/${encodeURIComponent(selected)}/tests?${new URLSearchParams({ ...(kind ? { kind } : {}), ...(mode ? { mode } : {}), ...(chapter ? { chapterId: chapter } : {}), ...(access ? { access } : {}), ...(search ? { q: search } : {}) })}`
     : "";
   useEffect(() => {
     const version = ++generation.current;
     setRows([]);
+    setPaper(null);
+    setChapters([]);
     setNext(null);
     setError("");
     moreBusy.current = false;
@@ -46,6 +54,7 @@ export function SeriesLibrary() {
       .then((d) => {
         if (version === generation.current) {
           setRows(d.rows);
+          setPaper(d.paper);
           setChapters(d.chapters || []);
           setNext(d.nextCursor);
         }
@@ -100,52 +109,167 @@ export function SeriesLibrary() {
   return (
     <>
       <div className="page-heading">
-        <span className="eyebrow">{tr("YOUR BOARD. YOUR TEST SERIES.")}</span>
+        <span className="eyebrow">
+          {tr(guide.data?.title || "YOUR BOARD. YOUR TEST SERIES.")}
+        </span>
         <h1>
           {selected
             ? group?.title || tr("Test series")
-            : tr("Find your next challenge")}
+            : tr("BSEB test series")}
           <span className="accent">.</span>
         </h1>
         <p>{tr("Choose a subject, pick a test and start practicing.")}</p>
       </div>
       <Notice error>{error || err}</Notice>
+      {!selected && (
+        <>
+          <div className="series-hero panel">
+            <div>
+              <span className="eyebrow">BSEB TEST SERIES</span>
+              <h2>{tr("Prepare one subject at a time")}</h2>
+              <p>
+                {tr(
+                  "Full board mocks, chapter tests and topic practice. Your progress stays with every test.",
+                )}
+              </p>
+            </div>
+            <div className="series-stats">
+              <strong>
+                {groups?.reduce((n, g) => n + g.testCount, 0) || 0}
+                <small>{tr("Published tests")}</small>
+              </strong>
+              <strong>
+                {groups?.reduce((n, g) => n + g.freeTests, 0) || 0}
+                <small>{tr("Free tests")}</small>
+              </strong>
+              <strong>
+                {groups?.length || 0}
+                <small>{tr("Subject series")}</small>
+              </strong>
+            </div>
+          </div>
+          <div className="toolbar">
+            <input
+              aria-label={tr("Search subjects")}
+              placeholder={tr("Search subjects…")}
+              value={subjectSearch}
+              onChange={(e) => setSubjectSearch(e.target.value)}
+            />
+            <select
+              aria-label={tr("Series session")}
+              value={session}
+              onChange={(e) => setSession(e.target.value)}
+            >
+              <option value="">{tr("All sessions")}</option>
+              {[...new Set(groups?.map((g) => g.session) || [])].map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+          {guide.data && (
+            <details className="panel board-overview">
+              <summary>{tr("BSEB subjects, marks & paper guide")}</summary>
+              <p>{tr(guide.data.summary)}</p>
+              <p className="small muted">{tr(guide.data.note)}</p>
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{tr("Subject")}</th>
+                      <th>{tr("Theory")}</th>
+                      <th>{tr("Practical / internal")}</th>
+                      <th>{tr("Paper questions")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {guide.data.subjects.map((s) => (
+                      <tr key={s.key}>
+                        <td>
+                          <a
+                            href={s.sourceUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {tr(s.name)}
+                          </a>
+                          <small className="muted">{tr(s.role)}</small>
+                        </td>
+                        <td>{s.theoryMarks ?? tr("Check source")}</td>
+                        <td>{s.otherAssessmentMarks ?? "—"}</td>
+                        <td>{tr(s.paperQuestionLabel)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <a
+                href={guide.data.schemeSource}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {tr("Official subject scheme")}
+              </a>
+            </details>
+          )}
+        </>
+      )}
       {!selected ? (
         <div className="test-grid">
-          {groups?.map((g) => (
-            <article className="test-card series-card" key={g.id}>
-              <div className="row between">
-                <span className="tag orange-tag">
-                  {tr("Class {0}", [g.classLevel])}
-                </span>
-                <span className="small muted">{g.session}</span>
-              </div>
-              <h3>{g.title}</h3>
-              <p>{tr("{0} tests · {1} free", [g.testCount, g.freeTests])}</p>
-              <div className="series-tags">
-                {g.modes.map((m) => (
-                  <span className="tag" key={m}>
-                    {tr(m)}
+          {groups
+            ?.filter(
+              (g) =>
+                (!session || g.session === session) &&
+                g.title.toLowerCase().includes(subjectSearch.toLowerCase()),
+            )
+            .map((g) => (
+              <article className="test-card series-card" key={g.id}>
+                <div className="row between">
+                  <span className="tag orange-tag">
+                    {tr("Class {0}", [g.classLevel])}
                   </span>
-                ))}
-              </div>
-              <p className="small muted">
-                {tr("Practice, mocks and results in one place.")}
-              </p>
-              <button
-                className="button primary"
-                onClick={() => {
-                  setMode("");
-                  setAccess("");
-                  setQuery("");
-                  setSearch("");
-                  setParams({ series: g.id });
-                }}
-              >
-                {tr("View tests")}
-              </button>
-            </article>
-          ))}
+                  <span className="small muted">{g.session}</span>
+                </div>
+                <div className="subject-monogram" aria-hidden="true">
+                  {g.title.slice(0, 2).toUpperCase()}
+                </div>
+                <h3>{g.title}</h3>
+                <p>{tr("{0} tests · {1} free", [g.testCount, g.freeTests])}</p>
+                <div className="series-tags">
+                  {g.modes.map((m) => (
+                    <span className="tag" key={m}>
+                      {tr(m)}
+                    </span>
+                  ))}
+                </div>
+                <p className="small muted">
+                  {g.reference?.theoryMarks != null
+                    ? tr("{0} theory marks · 2026 reference", [
+                        g.reference.theoryMarks,
+                      ])
+                    : tr("Practice, mocks and results in one place.")}
+                </p>
+                {!g.testCount && (
+                  <p className="small muted">
+                    {tr("Tests are being prepared. No published test yet.")}
+                  </p>
+                )}
+                <button
+                  className="button primary"
+                  onClick={() => {
+                    setMode("");
+                    setKind("");
+                    setAccess("");
+                    setQuery("");
+                    setSearch("");
+                    setParams({ series: g.id });
+                  }}
+                >
+                  {tr("View tests")}
+                </button>
+              </article>
+            ))}
         </div>
       ) : (
         <>
@@ -163,23 +287,40 @@ export function SeriesLibrary() {
               {group?.session} · {tr("Hindi / English where available")}
             </span>
           </div>
+          <PaperGuide paper={paper} />
+          <div className="tabs series-kind-tabs">
+            {[
+              ["", "All tests"],
+              ["FULL_MOCK", "Full mocks"],
+              ["CHAPTER", "Chapter tests"],
+              ["TOPIC", "Topic tests"],
+              ["SUBJECT", "Subject practice"],
+            ].map(([v, label]) => (
+              <button
+                key={v}
+                className={kind === v ? "active" : ""}
+                onClick={() => {
+                  setKind(v);
+                  setMode("");
+                }}
+              >
+                {tr(label)}
+              </button>
+            ))}
+          </div>
           <div className="toolbar">
-            <div className="tabs">
-              {[
-                ["", "All tests"],
-                ["PRACTICE", "Practice"],
-                ["CBT", "CBT mocks"],
-                ["BOARD", "Board mocks"],
-              ].map(([v, label]) => (
-                <button
-                  key={v}
-                  className={mode === v ? "active" : ""}
-                  onClick={() => setMode(v)}
-                >
-                  {tr(label)}
-                </button>
-              ))}
-            </div>
+            {kind !== "FULL_MOCK" && (
+              <select
+                aria-label={tr("Exam mode")}
+                value={mode}
+                onChange={(e) => setMode(e.target.value)}
+              >
+                <option value="">{tr("All modes")}</option>
+                <option value="PRACTICE">{tr("Practice")}</option>
+                <option value="CBT">{tr("CBT mocks")}</option>
+                {!kind && <option value="BOARD">{tr("Board mocks")}</option>}
+              </select>
+            )}
             <input
               aria-label={tr("Search tests")}
               placeholder={tr("Search tests…")}
@@ -219,9 +360,16 @@ export function SeriesLibrary() {
                     {t.premium ? tr("Study pass") : tr("Free practice")}
                   </span>
                   <h3>{t.title}</h3>
+                  <p className="small accent">
+                    {tr(t.category)}
+                    {t.topic ? ` · ${t.topic}` : ""}
+                  </p>
                   <p>{t.description}</p>
                   <div className="test-meta">
                     <span>{tr("{0} questions", [t.questions])}</span>
+                    {t.marks != null && (
+                      <span>{tr("{0} marks", [t.marks])}</span>
+                    )}
                     <span>
                       {t.durationMinutes
                         ? tr("{0} min", [t.durationMinutes])

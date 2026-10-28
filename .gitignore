@@ -19,3 +19,6 @@ playwright-report/
 **/credentials.json
 *.jks
 *.keystore
+
+# Generated, pinned browser OCR assets copied from npm at dev/build time.
+frontend/public/ocr/

@@ -1,7 +1,8 @@
+import { boardGuide, referenceFor } from "./bseb-catalog.js";
 import { Router } from "express";
 import { z } from "zod";
 import { id } from "@boardtestify/domain";
-import { Academic, TestModel, Attempt } from "./models.js";
+import { Academic, TestModel, Attempt, Pattern } from "./models.js";
 import { auth, assert } from "./lib.js";
 import { concurrencyGate } from "./reliability.js";
 export const series = Router();
@@ -11,9 +12,26 @@ const scope = (user) => ({
   "data.academic.classLevel": user.classLevel,
   "data.academic.stream": user.stream,
 });
+series.get("/test-series/board-guide", (req, res) =>
+  res.json(boardGuide(req.user.classLevel, req.user.stream)),
+);
 series.get("/test-series", async (req, res) => {
+  const subjects = await Academic.find({
+    kind: "SUBJECT",
+    active: true,
+    classLevel: req.user.classLevel,
+    stream: req.user.stream,
+  })
+    .sort({ session: -1, order: 1, name: 1 })
+    .limit(100)
+    .lean();
   const groups = await TestModel.aggregate([
-    { $match: scope(req.user) },
+    {
+      $match: {
+        ...scope(req.user),
+        "data.academic.subjectId": { $in: subjects.map((s) => String(s._id)) },
+      },
+    },
     {
       $group: {
         _id: "$data.academic.subjectId",
@@ -25,34 +43,37 @@ series.get("/test-series", async (req, res) => {
     { $sort: { _id: 1 } },
     { $limit: 100 },
   ]).option({ maxTimeMS: 5000 });
-  const subjects = await Academic.find({
-    _id: { $in: groups.map((g) => g._id) },
-    active: true,
-    classLevel: req.user.classLevel,
-    stream: req.user.stream,
-  })
-    .select("name session classLevel stream")
-    .lean();
-  const byId = new Map(subjects.map((s) => [String(s._id), s]));
+  const counts = new Map(groups.map((g) => [g._id, g]));
   res.json(
-    groups
-      .filter((g) => byId.has(g._id))
-      .map((g) => ({
-        id: g._id,
-        title: byId.get(g._id).name,
-        session: byId.get(g._id).session,
+    subjects.map((s) => {
+      const g = counts.get(String(s._id));
+      const ref = referenceFor(s);
+      return {
+        id: String(s._id),
+        title: s.name,
+        session: s.session,
         classLevel: req.user.classLevel,
         stream: req.user.stream,
-        testCount: g.tests,
-        freeTests: g.free,
-        modes: g.modes,
-      })),
+        testCount: g?.tests || 0,
+        freeTests: g?.free || 0,
+        modes: g?.modes || [],
+        reference: ref
+          ? {
+              referenceYear: ref.referenceYear,
+              theoryMarks: ref.theoryMarks,
+              otherAssessmentMarks: ref.otherAssessmentMarks,
+              paperQuestionLabel: ref.paperQuestionLabel,
+            }
+          : null,
+      };
+    }),
   );
 });
 series.get("/test-series/:id/tests", async (req, res) => {
   const subjectId = id.parse(req.params.id);
   const d = z
     .object({
+      kind: z.enum(["FULL_MOCK", "CHAPTER", "TOPIC", "SUBJECT"]).optional(),
       cursor: id.optional(),
       chapterId: id.optional(),
       mode: z.enum(["PRACTICE", "CBT", "BOARD"]).optional(),
@@ -67,7 +88,7 @@ series.get("/test-series/:id/tests", async (req, res) => {
     classLevel: req.user.classLevel,
     stream: req.user.stream,
   })
-    .select("name session")
+    .select("name session classLevel stream boardSubjectKey")
     .lean();
   assert(subject, 404, "Test series not found");
   const chapters = await Academic.find({
@@ -88,8 +109,38 @@ series.get("/test-series/:id/tests", async (req, res) => {
       "Chapter not found in this series",
     );
   const filter = { ...scope(req.user), "data.academic.subjectId": subjectId };
+  if (d.kind === "FULL_MOCK") filter["data.mode"] = "BOARD";
+  if (d.kind === "TOPIC") {
+    filter["data.academic.topic"] = { $type: "string", $regex: /\S/ };
+    filter["data.mode"] = { $ne: "BOARD" };
+  }
+  if (d.kind === "CHAPTER") {
+    filter["data.academic.chapterId"] = { $exists: true, $nin: [null, ""] };
+    filter.$or = [
+      { "data.academic.topic": { $exists: false } },
+      { "data.academic.topic": "" },
+    ];
+    filter["data.mode"] = { $ne: "BOARD" };
+  }
+  if (d.kind === "SUBJECT") {
+    filter["data.academic.chapterId"] = { $in: [null, ""] };
+    filter["data.academic.topic"] = { $in: [null, ""] };
+    filter["data.mode"] = { $ne: "BOARD" };
+  }
   if (d.chapterId) filter["data.academic.chapterId"] = d.chapterId;
-  if (d.mode) filter["data.mode"] = d.mode;
+  if (d.mode) {
+    assert(
+      d.kind !== "FULL_MOCK" || d.mode === "BOARD",
+      400,
+      "Full mocks use board mode",
+    );
+    assert(
+      !["CHAPTER", "TOPIC", "SUBJECT"].includes(d.kind) || d.mode !== "BOARD",
+      400,
+      "Choose full mocks for board mode",
+    );
+    filter["data.mode"] = d.mode;
+  }
   if (d.access) filter["data.premium"] = d.access === "PREMIUM";
   if (d.cursor) filter._id = { $lt: d.cursor };
   if (d.q)
@@ -101,7 +152,7 @@ series.get("/test-series/:id/tests", async (req, res) => {
     .sort({ _id: -1 })
     .limit(21)
     .select(
-      "data.title data.description data.mode data.durationMinutes data.premium data.sections data.academic.session version",
+      "data.title data.description data.mode data.durationMinutes data.premium data.sections data.academic.session data.academic.chapterId data.academic.topic data.patternId version",
     )
     .maxTimeMS(5000)
     .lean();
@@ -127,7 +178,29 @@ series.get("/test-series/:id/tests", async (req, res) => {
     },
   ]).option({ maxTimeMS: 5000 });
   const byTest = new Map(attempts.map((a) => [a._id, a]));
+  const approved = await Pattern.findOne({
+    status: "PUBLISHED",
+    "data.academic.subjectId": subjectId,
+    "data.academic.session": subject.session,
+    "data.academic.classLevel": req.user.classLevel,
+    "data.academic.stream": req.user.stream,
+  })
+    .sort({ updatedAt: -1 })
+    .select("data")
+    .lean();
+  const reference = referenceFor(subject);
   res.json({
+    paper: approved
+      ? {
+          ...approved.data,
+          sections: approved.data.sections,
+          sourceUrl: approved.data.officialSource,
+          theoryMarks: approved.data.totalMarks,
+          label: "Approved session layout",
+        }
+      : reference
+        ? { ...reference, label: "2026 model-paper reference" }
+        : null,
     chapters: chapters.map((c) => ({ id: String(c._id), title: c.name })),
     subject: { id: subjectId, title: subject.name, session: subject.session },
     rows: rows.map((t) => {
@@ -139,6 +212,21 @@ series.get("/test-series/:id/tests", async (req, res) => {
         mode: t.data.mode,
         durationMinutes: t.data.durationMinutes,
         premium: !!t.data.premium,
+        category:
+          t.data.mode === "BOARD"
+            ? "Full mock"
+            : t.data.academic.topic
+              ? "Topic test"
+              : t.data.academic.chapterId
+                ? "Chapter test"
+                : "Subject practice",
+        topic: t.data.academic.topic || null,
+        marks:
+          t.data.mode === "BOARD" &&
+          approved &&
+          t.data.patternId === String(approved._id)
+            ? approved.data.totalMarks
+            : null,
         questions: t.data.sections.reduce(
           (n, s) => n + (s.drawCount ?? s.questionIds.length),
           0,

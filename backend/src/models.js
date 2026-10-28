@@ -53,6 +53,7 @@ export const Reset = make(
   [[{ expiresAt: 1 }, { expireAfterSeconds: 0 }]],
 );
 export const Academic = make("Academic", {
+  boardSubjectKey: String,
   kind: String,
   name: String,
   session: String,

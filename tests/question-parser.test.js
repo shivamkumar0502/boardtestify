@@ -29,3 +29,14 @@ test("paste parser rejects duplicate letters, oversized imports and invalid keys
     assert.throws(() => parsePastedMCQ(text));
   }
 });
+
+test("book OCR parser accepts Devanagari numbering, inline options and descriptive drafts", () => {
+  const rows = parsePastedMCQ(
+    "प्रश्न १- सही विकल्प चुनें।\n(क) एक (ख) दो (ग) तीन (घ) चार\nउत्तर: (ख)\n२. प्रकाश का परावर्तन समझाइए।",
+  );
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].options.length, 4);
+  assert.deepEqual(rows[0].correct, ["b"]);
+  assert.equal(rows[1].type, "SHORT_ANSWER");
+  assert.equal(rows[1].referenceAnswer, "");
+});
