@@ -48,3 +48,7 @@ A student signs up in Hindi, selects the right class/stream, starts a source-app
 Administration → Operations and `npm run preflight` list missing service configuration without displaying credentials or certifying provider acceptance. Web/Android now accept bounded PDF answer pages; Android can request a secure email reset link, completed on the HTTPS website. Password reset invalidates prior links and sessions, including concurrent stale reset attempts; legacy reset links must be requested again after this update.
 
 See OPERATIONS.md for the Linux Docker API/worker setup, PDF host requirements, checksummed database backups and restore drills into a new isolated database. The local recovery test uses real MongoDB tools with disposable data; it does not constitute a production recovery drill.
+
+## BSEB source-based practice pack
+
+Five bilingual mini-test drafts / fifteen adapted MCQs can be inserted with `npm run seed:bseb` after migrations. Full official paper links and per-question source pages are retained. Teachers must check the suggested keys and approve questions before publishing the tests. The historical 2025–26 scope is preserved. See BSEB_TEST_PACK.md. This is not a complete official question bank or current-session release approval.

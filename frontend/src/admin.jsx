@@ -272,6 +272,16 @@ function ContentEditor({ kind }) {
                 {tr(r.version)}
               </span>
               <h3>{r.data.title || tr(r.data.text)}</h3>
+              {(r.data.sourceUrl || r.data.officialSource) && (
+                <a
+                  className="accent small"
+                  target="_blank"
+                  rel="noreferrer"
+                  href={r.data.sourceUrl || r.data.officialSource}
+                >
+                  {tr("Open source paper")}
+                </a>
+              )}
               <button
                 className="text-button muted small"
                 onClick={() =>

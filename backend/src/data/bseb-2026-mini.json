@@ -1,0 +1,252 @@
+[
+  {
+    "id": "bseb-2026-10-general-mathematics-mini-v1",
+    "classLevel": "10",
+    "stream": "GENERAL",
+    "subject": "Mathematics",
+    "session": "2025-26",
+    "examYear": 2026,
+    "sourceUrl": "https://biharboardonline.com/files/MatricModelPaper/2026/110_Math.pdf",
+    "sourceCheckedAt": "2026-10-28T00:00:00.000Z",
+    "questions": [
+      {
+        "sourceQuestion": 2,
+        "sourcePage": 3,
+        "text": "Positive integers have identical HCF and LCM. How are they related?",
+        "translation": "दो धनात्मक पूर्णांकों का HCF और LCM समान है। उनका संबंध?",
+        "options": [
+          "Equal / बराबर",
+          "Always prime / सदैव अभाज्य",
+          "Always distinct / सदैव भिन्न",
+          "Coprime / सह-अभाज्य"
+        ],
+        "answer": 0,
+        "explanation": "HCF ≤ each number ≤ LCM; equality forces both numbers equal."
+      },
+      {
+        "sourceQuestion": 8,
+        "sourcePage": 5,
+        "text": "Write 720 = 2^p × 3^q × 5^r. Find p + q − r.",
+        "translation": "720 = 2^p × 3^q × 5^r में p + q − r ज्ञात करें।",
+        "options": ["5", "6", "7", "8"],
+        "answer": 0,
+        "explanation": "720 = 2^4 × 3^2 × 5; 4 + 2 − 1 = 5."
+      },
+      {
+        "sourceQuestion": 9,
+        "sourcePage": 6,
+        "text": "Which fraction has a recurring, non-terminating decimal?",
+        "translation": "किस भिन्न का दशमलव असांत आवर्ती है?",
+        "options": ["1/8", "3/20", "1/6", "7/25"],
+        "answer": 2,
+        "explanation": "A reduced denominator containing a prime other than 2 or 5 prevents termination."
+      }
+    ]
+  },
+  {
+    "id": "bseb-2026-10-general-science-mini-v1",
+    "classLevel": "10",
+    "stream": "GENERAL",
+    "subject": "Science",
+    "session": "2025-26",
+    "examYear": 2026,
+    "sourceUrl": "https://biharboardonline.com/files/MatricModelPaper/2026/112_Science.pdf",
+    "sourceCheckedAt": "2026-10-28T00:00:00.000Z",
+    "questions": [
+      {
+        "sourceQuestion": 1,
+        "sourcePage": 3,
+        "text": "A flat reflecting surface has what focal length?",
+        "translation": "समतल परावर्तक पृष्ठ की फोकस दूरी क्या होगी?",
+        "options": [
+          "Infinite / अनंत",
+          "Zero / शून्य",
+          "1 metre / मीटर",
+          "Negative finite / ऋणात्मक सीमित"
+        ],
+        "answer": 0,
+        "explanation": "A plane mirror is the infinite-radius limiting case of a spherical mirror."
+      },
+      {
+        "sourceQuestion": 2,
+        "sourcePage": 3,
+        "text": "A mirror forms a real image where reflected rays actually meet. Where is it?",
+        "translation": "दर्पण की परावर्तित किरणों से वास्तविक प्रतिबिंब कहाँ बनता है?",
+        "options": [
+          "Behind / पीछे",
+          "In front / सामने",
+          "Inside glass / काँच में",
+          "Nowhere / कहीं नहीं"
+        ],
+        "answer": 1,
+        "explanation": "Real reflected rays intersect on the reflecting side."
+      },
+      {
+        "sourceQuestion": 4,
+        "sourcePage": 4,
+        "text": "Light reflects without changing medium. Its speed becomes:",
+        "translation": "माध्यम बदले बिना परावर्तन के बाद प्रकाश की चाल:",
+        "options": [
+          "Half / आधी",
+          "Double / दोगुनी",
+          "Unchanged / अपरिवर्तित",
+          "Zero / शून्य"
+        ],
+        "answer": 2,
+        "explanation": "Speed depends on the medium, which has not changed."
+      }
+    ]
+  },
+  {
+    "id": "bseb-2026-12-science-physics-mini-v1",
+    "classLevel": "12",
+    "stream": "SCIENCE",
+    "subject": "Physics",
+    "session": "2025-26",
+    "examYear": 2026,
+    "sourceUrl": "https://biharboardonline.com/files/InterModelPaper/2026/117_Physics.pdf",
+    "sourceCheckedAt": "2026-10-28T00:00:00.000Z",
+    "questions": [
+      {
+        "sourceQuestion": 2,
+        "sourcePage": 3,
+        "text": "An initially neutral capacitor has plate charges +Q and −Q. Net charge?",
+        "translation": "आरंभ में उदासीन संधारित्र की पट्टियों पर +Q तथा −Q हैं। कुल आवेश?",
+        "options": ["0", "Q", "2Q", "−2Q"],
+        "answer": 0,
+        "explanation": "Opposite equal charges sum to zero."
+      },
+      {
+        "sourceQuestion": 3,
+        "sourcePage": 4,
+        "text": "What directed electron motion accounts for steady conduction current?",
+        "translation": "स्थिर चालन धारा के लिए इलेक्ट्रॉनों की कौन-सी निर्देशित गति उत्तरदायी है?",
+        "options": [
+          "Orbital / कक्षीय",
+          "Drift / अपवाह",
+          "Nuclear / नाभिकीय",
+          "No motion / गति नहीं"
+        ],
+        "answer": 1,
+        "explanation": "A small net drift is superimposed on random thermal motion."
+      },
+      {
+        "sourceQuestion": 13,
+        "sourcePage": 7,
+        "text": "Series capacitors 2 μF and 4 μF share 1200 V. Voltage on 2 μF?",
+        "translation": "श्रेणी में 2 μF तथा 4 μF पर कुल 1200 V है। 2 μF पर विभव?",
+        "options": ["400 V", "600 V", "800 V", "1200 V"],
+        "answer": 2,
+        "explanation": "Equal charge gives V₂/V₄ = 4/2; the smaller capacitor receives 800 V."
+      }
+    ]
+  },
+  {
+    "id": "bseb-2026-12-arts-history-mini-v1",
+    "classLevel": "12",
+    "stream": "ARTS",
+    "subject": "History",
+    "session": "2025-26",
+    "examYear": 2026,
+    "sourceUrl": "https://biharboardonline.com/files/InterModelPaper/2026/321_History.pdf",
+    "sourceCheckedAt": "2026-10-28T00:00:00.000Z",
+    "questions": [
+      {
+        "sourceQuestion": 2,
+        "sourcePage": 3,
+        "text": "Which settlement is associated with an excavated Harappan ploughed field?",
+        "translation": "खुदाई में मिले हड़प्पाई जुते खेत का संबंध किस स्थल से है?",
+        "options": [
+          "Kalibangan / कालीबंगन",
+          "Pataliputra / पाटलिपुत्र",
+          "Sanchi / साँची",
+          "Taxila / तक्षशिला"
+        ],
+        "answer": 0,
+        "explanation": "Kalibangan provides archaeological evidence of a ploughed field."
+      },
+      {
+        "sourceQuestion": 3,
+        "sourcePage": 4,
+        "text": "Which material commonly appears in Harappan stamp seals?",
+        "translation": "हड़प्पाई मुहरों में सामान्यतः कौन-सा पदार्थ मिलता है?",
+        "options": [
+          "Iron / लोहा",
+          "Steatite / सेलखड़ी",
+          "Paper / कागज़",
+          "Glass / काँच"
+        ],
+        "answer": 1,
+        "explanation": "Steatite was commonly carved into seals."
+      },
+      {
+        "sourceQuestion": 7,
+        "sourcePage": 5,
+        "text": "The archaeological city of Harappa lies beside which river?",
+        "translation": "पुरातात्त्विक हड़प्पा नगर किस नदी के समीप है?",
+        "options": [
+          "Ganga / गंगा",
+          "Narmada / नर्मदा",
+          "Ravi / रावी",
+          "Kaveri / कावेरी"
+        ],
+        "answer": 2,
+        "explanation": "Harappa is associated with the Ravi river."
+      }
+    ]
+  },
+  {
+    "id": "bseb-2026-12-commerce-accountancy-mini-v1",
+    "classLevel": "12",
+    "stream": "COMMERCE",
+    "subject": "Accountancy",
+    "session": "2025-26",
+    "examYear": 2026,
+    "sourceUrl": "https://biharboardonline.com/files/InterModelPaper/2026/220_Accountancy.pdf",
+    "sourceCheckedAt": "2026-10-28T00:00:00.000Z",
+    "questions": [
+      {
+        "sourceQuestion": 2,
+        "sourcePage": 3,
+        "text": "In traditional classification, a receipts-and-payments summary represents which account type?",
+        "translation": "परंपरागत वर्गीकरण में प्राप्ति-भुगतान सारांश किस प्रकार का खाता है?",
+        "options": [
+          "Personal / व्यक्तिगत",
+          "Nominal / नाममात्र",
+          "Real / वास्तविक",
+          "None / कोई नहीं"
+        ],
+        "answer": 2,
+        "explanation": "It summarises cash/bank transactions and is a real account."
+      },
+      {
+        "sourceQuestion": 5,
+        "sourcePage": 4,
+        "text": "Uncollected membership subscription due to a club is classified as:",
+        "translation": "क्लब को मिलने वाला बकाया सदस्यता शुल्क क्या है?",
+        "options": [
+          "Expense / व्यय",
+          "Asset / संपत्ति",
+          "Liability / दायित्व",
+          "Capital loss / पूँजी हानि"
+        ],
+        "answer": 1,
+        "explanation": "An amount receivable is an asset."
+      },
+      {
+        "sourceQuestion": 29,
+        "sourcePage": 11,
+        "text": "Which traditional account category covers the realisation account?",
+        "translation": "वसूली खाते का परंपरागत वर्गीकरण क्या है?",
+        "options": [
+          "Real / वास्तविक",
+          "Personal / व्यक्तिगत",
+          "Nominal / नाममात्र",
+          "Cash / नकद"
+        ],
+        "answer": 2,
+        "explanation": "It records realisation gains and losses, hence is nominal."
+      }
+    ]
+  }
+]

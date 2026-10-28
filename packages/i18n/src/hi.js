@@ -848,4 +848,5 @@ export default {
     "Android रिलीज़ पर हस्ताक्षर करें और असली उपकरणों पर परीक्षण करें",
   "Answer storage is temporarily unavailable. Please retry.":
     "उत्तर संग्रहण अभी उपलब्ध नहीं है। दोबारा प्रयास करें।",
+  "Open source paper": "स्रोत प्रश्नपत्र खोलें",
 };
