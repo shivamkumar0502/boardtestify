@@ -24,6 +24,18 @@ export const env = z
     S3_ACCESS_KEY_ID: z.string().default(""),
     S3_SECRET_ACCESS_KEY: z.string().default(""),
     DB_POOL_MAX: z.coerce.number().int().min(5).max(200).default(30),
+    DB_SELECTION_TIMEOUT_MS: z.coerce
+      .number()
+      .int()
+      .min(1000)
+      .max(120000)
+      .default(30000),
+    DB_WAIT_QUEUE_TIMEOUT_MS: z.coerce
+      .number()
+      .int()
+      .min(1000)
+      .max(60000)
+      .default(5000),
     TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
     API_CONCURRENCY: z.coerce.number().int().min(10).max(1000).default(150),
     WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(2),

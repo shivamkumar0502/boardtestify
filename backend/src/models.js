@@ -1,6 +1,9 @@
 import mongoose, { Schema } from "mongoose";
 import { env } from "./config.js";
 mongoose.set("bufferTimeoutMS", 2000);
+// Model compilation must not launch parallel collection/index jobs on connection.
+mongoose.set("autoCreate", false);
+mongoose.set("autoIndex", false);
 // Application validation happens at every API boundary. Strict top-level persistence
 // schemas keep immutable exam snapshots together in one atomically updated document.
 const make = (name, fields, indexes = []) => {
@@ -259,16 +262,22 @@ export async function connect(uri) {
   await mongoose.connect(uri, {
     maxPoolSize: env.DB_POOL_MAX,
     minPoolSize: 2,
-    serverSelectionTimeoutMS: 8000,
+    serverSelectionTimeoutMS: env.DB_SELECTION_TIMEOUT_MS,
     socketTimeoutMS: 30000,
     maxIdleTimeMS: 30000,
-    waitQueueTimeoutMS: 5000,
-    autoIndex: env.NODE_ENV !== "production",
+    waitQueueTimeoutMS: env.DB_WAIT_QUEUE_TIMEOUT_MS,
+    autoCreate: false,
+    autoIndex: false,
   });
-  await Promise.all(indexedModels.map((m) => m.init()));
+  // Development still gets all uniqueness/attempt indexes before serving requests.
+  // Production DDL belongs to the explicit migration, never every API replica.
+  if (env.NODE_ENV !== "production") await migrateIndexes();
 }
 export async function migrateIndexes() {
-  for (const m of indexedModels) await m.createIndexes();
+  for (const m of indexedModels) {
+    await m.createCollection();
+    await m.createIndexes();
+  }
 }
 Academic.schema.index({
   active: 1,

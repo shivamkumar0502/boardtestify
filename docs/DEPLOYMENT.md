@@ -52,3 +52,9 @@ Configure database/object-store backups, restore drills, retention/deletion proc
 ## Repeatable release tooling
 
 See [OPERATIONS.md](OPERATIONS.md) for configuration preflight, the Docker/Compose API-worker setup, PDF dependencies and logical backup/isolated restore-drill commands. Provider credentials and live acceptance, production recovery, current academic approval and Android signing/device testing remain client-specific release steps.
+
+## Slow Atlas connections during local startup
+
+A successful standalone connection does not exercise application model startup. Collection/index initialization now runs sequentially in development/test, with automatic Mongoose DDL disabled before models compile. Production API/worker startup does not create collections or indexes; run migrations before release. Existing collections and documents are preserved.
+
+`DB_SELECTION_TIMEOUT_MS` defaults to 30000. `DB_WAIT_QUEUE_TIMEOUT_MS` defaults to 5000 to bound production queues. For a slow local Atlas connection, set the latter to 30000 in the root `.env`, stop old API processes and restart. These bounded settings do not fix a network outage or guarantee access to an unavailable primary. Do not increase `DB_POOL_MAX` blindly to work around connection establishment delays.
