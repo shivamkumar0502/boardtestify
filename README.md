@@ -90,3 +90,7 @@ First browser run: `npx playwright install chromium`. Integration/load/browser t
 See [client handoff](docs/CLIENT_HANDOFF.md), [validation evidence](docs/QA.md), [deployment](docs/DEPLOYMENT.md), [API](docs/API.md), [CBT](docs/CBT_ENGINE.md), [AI evaluation](docs/AI_EVALUATION.md), and [scope](docs/PRD.md).
 
 No real paid-provider activation, official-content approval, signed AAB, production deployment, backup restoration or physical-device certification is implied by local tests.
+
+## BSEB source-based mini tests
+
+`npm run seed:bseb` imports five reviewable draft mini tests (15 bilingual MCQs) based on the official 2026 Matric/Intermediate model-paper topics: Class 10 Mathematics/Science and Class 12 Physics, History and Accountancy. Run migrations first. These are adapted practice sets with suggested keys, not full official papers or approved 2027 content. See [test pack and publication steps](docs/BSEB_TEST_PACK.md).

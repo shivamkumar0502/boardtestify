@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { env } from "./config.js";
 import { connect, User, Academic, QuestionModel, TestModel } from "./models.js";
 import { hash } from "./lib.js";
-import { seedCatalog } from "./catalog.js";
+import { seedBSEB } from "./seed-bseb.js";
 await connect(env.MONGODB_URI);
 try {
   if (process.argv[2] === "admin") {
@@ -32,8 +32,10 @@ try {
       { upsert: true },
     );
     console.log("Administrator created/updated. No credentials were logged.");
+  } else if (process.argv[2] === "seed:bseb") {
+    console.log(JSON.stringify(await seedBSEB()));
   } else if (process.argv[2] === "seed") {
-    await seedCatalog();
+    await seedBSEB();
     // Original examples, not official BSEB syllabus, papers, or exam configurations.
     const subject = await Academic.findOneAndUpdate(
       {
@@ -155,9 +157,9 @@ try {
       { upsert: true },
     );
     console.log(
-      "Illustrative practice content is ready. Official BSEB content has not been seeded.",
+      "Illustrative demo is ready; five BSEB-2026 source-based mini tests are DRAFT and need teacher review.",
     );
-  } else throw Error("Use seed or admin");
+  } else throw Error("Use seed, seed:bseb or admin");
 } finally {
   await mongoose.disconnect();
 }
