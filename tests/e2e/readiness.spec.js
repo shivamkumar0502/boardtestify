@@ -360,10 +360,6 @@ test("real local photo OCR works without paid provider and produces editable MCQ
       exact: true,
     })
     .click();
-  await page
-    .getByRole("combobox", { name: "Subject", exact: true })
-    .selectOption({ label: "Mathematics · sample practice" });
-  await page.getByLabel("Source / book name").fill("Printed local OCR fixture");
   await page.getByRole("button", { name: "Book photo", exact: true }).click();
   const hindi = info.project.name === "mobile-web";
   if (hindi)
@@ -390,7 +386,18 @@ test("real local photo OCR works without paid provider and produces editable MCQ
         ]
       : ["1. What is 2 + 3?", "A) Four", "B) Five", "C) Six", "D) Seven"]
     ).forEach((line, i) => c.fillText(line, 80, 110 + i * 110));
-    return canvas.toDataURL("image/png").split(",")[1];
+    c.font = "30px Arial";
+    c.fillText("UNRELATED COLUMN", 980, 110);
+    c.fillText("Do not import this text", 980, 200);
+    // Sideways, two-column page: exercise actual rotation + selected-area OCR.
+    const sideways = document.createElement("canvas");
+    sideways.width = canvas.height;
+    sideways.height = canvas.width;
+    const rotated = sideways.getContext("2d");
+    rotated.translate(sideways.width, 0);
+    rotated.rotate(Math.PI / 2);
+    rotated.drawImage(canvas, 0, 0);
+    return sideways.toDataURL("image/png").split(",")[1];
   }, hindi);
   const external = [];
   page.on("request", (req) => {
@@ -405,6 +412,18 @@ test("real local photo OCR works without paid provider and produces editable MCQ
     mimeType: "image/png",
     buffer: Buffer.from(png, "base64"),
   });
+  await page.getByRole("button", { name: "Rotate left", exact: true }).click();
+  const preview = page.getByRole("group", { name: "Photo crop preview" });
+  await expect(preview).toHaveAttribute("aria-busy", "false");
+  await preview.scrollIntoViewIfNeeded();
+  const box = await preview.boundingBox();
+  await page.mouse.move(box.x + box.width * 0.02, box.y + box.height * 0.05);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.65, box.y + box.height * 0.85, {
+    steps: 5,
+  });
+  await page.mouse.up();
+  await expect(preview).not.toHaveAttribute("data-selection-width", "1");
   await page
     .getByRole("button", { name: "Read photo for free", exact: true })
     .click();
@@ -412,6 +431,13 @@ test("real local photo OCR works without paid provider and produces editable MCQ
     hindi ? /भारत/ : /What is 2 \+ 3/,
     { timeout: 60000 },
   );
+  await expect(page.getByLabel("Paste question text")).not.toHaveValue(
+    /UNRELATED COLUMN/,
+  );
+  await page
+    .getByRole("combobox", { name: "Subject", exact: true })
+    .selectOption({ label: "Mathematics · sample practice" });
+  await page.getByLabel("Source / book name").fill("Printed local OCR fixture");
   if (hindi) {
     const extracted = await page.getByLabel("Paste question text").inputValue();
     // The real Hindi OCR sometimes reads the printed 1. as L.; staff corrects it.
@@ -649,4 +675,50 @@ test("Class 12 stream packs publish real questions and appear for the matching s
   } finally {
     await context.close();
   }
+});
+
+test("local photo reader reports missing worker assets and allows retry without metadata", async ({
+  page,
+}) => {
+  await login(page, "reviewer@fixture.example");
+  await page
+    .getByRole("button", {
+      name: "Create test from photo or text",
+      exact: true,
+    })
+    .click();
+  await page.getByRole("button", { name: "Book photo", exact: true }).click();
+  const png = await page.evaluate(() => {
+    const c = document.createElement("canvas");
+    c.width = 400;
+    c.height = 200;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, 400, 200);
+    ctx.fillStyle = "black";
+    ctx.font = "32px Arial";
+    ctx.fillText("1. Test question?", 20, 60);
+    return c.toDataURL("image/png").split(",")[1];
+  });
+  await page
+    .getByLabel("Book page photo", { exact: true })
+    .setInputFiles({
+      name: "asset-error.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(png, "base64"),
+    });
+  await page.route("**/ocr/worker.min.js", (route) => route.abort());
+  const read = page.getByRole("button", {
+    name: "Read photo for free",
+    exact: true,
+  });
+  await read.click();
+  await expect(
+    page.getByText(
+      "Photo reader failed. Reload and retry a smaller, upright crop.",
+      { exact: true },
+    ),
+  ).toBeVisible({ timeout: 15000 });
+  await expect(read).toBeEnabled();
+  await expect(page.getByLabel("Paste question text")).toHaveCount(0);
 });

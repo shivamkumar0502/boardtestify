@@ -63,18 +63,27 @@ export function parsePastedMCQ(text) {
   const normalized = text
     .replace(/[०-९]/g, (d) => digits.indexOf(d))
     .replace(/\(([कखगघ])\)/g, (_, letter) => `(${letters[letter]})`)
-    .replace(/^(?:प्रश्न|Q(?:uestion)?\.?)\s*(?=\d{1,3}[.)\-।]\s)/gim, "");
-  const lines = normalized
-    .split(/\r?\n/)
-    .flatMap((line) =>
-      (line.match(/\([A-Da-d]\)/g) || []).length >= 2
-        ? line.replace(/\s*(?=\([A-Da-d]\))/g, "\n").split("\n")
-        : [line],
-    );
+    .replace(
+      /(^|\s)([कखगघ])([).:])/gm,
+      (_, space, letter, mark) => `${space}${letters[letter]}${mark}`,
+    )
+    .replace(
+      /((?:उत्तर)\s*[:\-]\s*)([कखगघ])(?=\s*$)/gm,
+      (_, label, letter) => label + letters[letter],
+    )
+    .replace(/^(?:प्रश्न|Q(?:uestion)?\.?)\s*(?=\(?\d{1,3}[.)\-।])/gim, "");
+  const lines = normalized.split(/\r?\n/).flatMap((line) => {
+    // Books commonly print two or four options on a single line. Only split
+    // when at least two explicit option markers occur; keep ordinary prose.
+    const markers = /(?:^|\s)(?:\([A-Da-d]\)|[A-Da-d][).:])\s*/g;
+    return [...line.matchAll(markers)].length >= 2
+      ? line.replace(markers, (marker) => "\n" + marker.trimStart()).split("\n")
+      : [line];
+  });
   for (const raw of lines) {
     const line = raw.trim();
     if (!line) continue;
-    const head = /^(\d{1,3})[.)\-।]\s+(.+)/.exec(line),
+    const head = /^\(?(\d{1,3})[.)\-।]\s*(.+)/.exec(line),
       option = /^\(?([A-Da-d])\s*[).:]\s*(.+)/.exec(line),
       answer = /^(?:answer|ans|उत्तर)\s*[:\-]\s*\(?([A-Da-d])\)?\s*$/i.exec(
         line,

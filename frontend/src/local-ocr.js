@@ -1,45 +1,59 @@
+import { fullPhoto, uprightPhoto, selectedPhoto } from "./ocr-image";
 // OCR runs on the staff device. Images are not sent to a paid service.
-export async function readPrintedPhoto(file, language, onProgress, signal) {
+export async function readPrintedPhoto(
+  file,
+  language,
+  onProgress,
+  signal,
+  options = {},
+) {
   if (
     !file ||
     !/^image\/(jpeg|png|webp)$/.test(file.type) ||
     file.size > 5000000
   )
     throw new Error("Choose a JPEG, PNG or WebP photo smaller than 5 MB.");
-  const bitmap = await createImageBitmap(file);
-  if (bitmap.width * bitmap.height > 24000000) {
-    bitmap.close();
-    throw new Error("Crop the photo to one question column before extracting.");
-  }
-  const scale = Math.min(1, 2200 / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "white";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
+  if (signal?.aborted) throw new Error("Photo reading cancelled.");
+  onProgress?.(0, "Preparing selected photo");
+  const canvas = selectedPhoto(
+    await uprightPhoto(file, options.rotation || 0),
+    options.crop || fullPhoto,
+  );
+  if (signal?.aborted) throw new Error("Photo reading cancelled.");
   const { createWorker } = await import("tesseract.js");
   let worker,
     ended = false,
     timer,
-    abort;
+    abort,
+    rejectWorker;
+  const workerFailed = new Promise((_, reject) => {
+    rejectWorker = reject;
+  });
   const operation = (async () => {
     worker = await createWorker(language === "hi" ? "hin+eng" : "eng", 1, {
       workerPath: "/ocr/worker.min.js",
       corePath: "/ocr/core",
       langPath: "/ocr/lang",
       workerBlobURL: false,
+      errorHandler: () =>
+        rejectWorker(
+          new Error(
+            "Photo reader could not load or process this image. Check your connection, reload and retry a smaller crop.",
+          ),
+        ),
       logger: (m) =>
-        !ended && onProgress(Math.round((m.progress || 0) * 100), m.status),
+        !ended && onProgress?.(Math.round((m.progress || 0) * 100), m.status),
     });
     if (ended || signal?.aborted) {
       await worker.terminate();
       throw new Error("Photo reading cancelled.");
     }
-    await worker.setParameters({ preserve_interword_spaces: "1" });
-    const { data } = await worker.recognize(canvas);
+    await worker.setParameters({
+      preserve_interword_spaces: "1",
+      tessedit_pageseg_mode: "6",
+      user_defined_dpi: "300",
+    });
+    const { data } = await worker.recognize(canvas, { rotateAuto: true });
     if (!data.text?.trim())
       throw new Error(
         "No readable text found. Crop a clear printed question and try again.",
@@ -63,11 +77,17 @@ export async function readPrintedPhoto(file, language, onProgress, signal) {
     );
   });
   try {
-    return await Promise.race([operation, stopped]);
+    return await Promise.race([operation, stopped, workerFailed]);
+  } catch (e) {
+    throw e instanceof Error
+      ? e
+      : new Error(
+          "Photo reader failed. Reload and retry a smaller, upright crop.",
+        );
   } finally {
     ended = true;
     clearTimeout(timer);
     signal?.removeEventListener("abort", abort);
-    if (worker) await worker.terminate();
+    if (worker) await worker.terminate().catch(() => {});
   }
 }
