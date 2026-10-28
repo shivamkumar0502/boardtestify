@@ -244,14 +244,20 @@ authRouter.post("/reset-password", async (req, res) => {
     hash: hash(d.token),
     expiresAt: { $gt: new Date() },
   });
-  assert(r, 400, "Reset link is invalid or expired");
-  await User.updateOne(
-    { _id: r.userId },
+  assert(
+    r && Number.isInteger(r.authVersion),
+    400,
+    "Reset link is invalid or expired",
+  );
+  const changed = await User.updateOne(
+    { _id: r.userId, active: true, authVersion: r.authVersion },
     {
       $set: { passwordHash: await bcrypt.hash(d.password, 12) },
       $inc: { authVersion: 1 },
     },
   );
+  assert(changed.matchedCount, 400, "Reset link is invalid or expired");
+  await Reset.deleteMany({ userId: r.userId });
   await Session.deleteMany({ userId: r.userId });
   res.json({ ok: true });
 });

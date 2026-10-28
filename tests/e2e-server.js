@@ -1,7 +1,13 @@
 import { MongoMemoryServer } from "mongodb-memory-server";
+import http from "node:http";
 import { spawn } from "node:child_process";
 import mongoose from "mongoose";
 process.env.NODE_ENV = "test";
+process.env.S3_BUCKET = "fixture";
+process.env.S3_REGION = "us-east-1";
+process.env.S3_ACCESS_KEY_ID = "test";
+process.env.S3_SECRET_ACCESS_KEY = "test";
+process.env.S3_ENDPOINT = "http://127.0.0.1:4173/fixture-storage";
 process.env.MONGODB_URI = "";
 process.env.WEB_ORIGIN = "http://127.0.0.1:4173";
 process.env.JWT_SECRET = "e2e-only-secret-".repeat(5);
@@ -44,7 +50,36 @@ await User.create([
   },
 ]);
 const { app } = await import("../backend/src/app.js");
-const server = app.listen(4173, "127.0.0.1");
+// Disposable S3 adapter on the same origin, so browser CSP and previews are exercised.
+const images = new Map();
+const server = http
+  .createServer(async (req, res) => {
+    const path = new URL(req.url, "http://fixture").pathname;
+    if (!path.startsWith("/fixture-storage/")) return app(req, res);
+    if (req.method === "PUT") {
+      const chunks = [];
+      for await (const bytes of req) chunks.push(bytes);
+      images.set(path, Buffer.concat(chunks));
+      res.writeHead(200, { ETag: '"fixture"' });
+      return res.end();
+    }
+    if (req.method === "DELETE") {
+      images.delete(path);
+      res.statusCode = 204;
+      return res.end();
+    }
+    const bytes = images.get(path);
+    if (!bytes) {
+      res.statusCode = 404;
+      return res.end();
+    }
+    res.writeHead(200, {
+      "Content-Type": "image/jpeg",
+      "Content-Length": bytes.length,
+    });
+    res.end(bytes);
+  })
+  .listen(4173, "127.0.0.1");
 process.on("SIGTERM", () =>
   server.close(async () => {
     await mongoose.disconnect();

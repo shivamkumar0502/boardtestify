@@ -24,6 +24,7 @@ import { Notice, Empty, useLoad } from "./main";
 export function Exam() {
   useLanguage();
   const { id } = useParams();
+  const features = useLoad("/features");
   const nav = useNavigate();
   const [a, setA] = useState(null),
     [index, setIndex] = useState(0),
@@ -282,6 +283,10 @@ export function Exam() {
     try {
       const uploaded = await uploadFile(`/attempts/${id}/sheets`, file, {
         questionId: target._id,
+        maxPages:
+          4 -
+          ((queue.current[target._id] || aRef.current.answers[target._id])
+            ?.attachmentIds?.length || 0),
       });
       const local =
         queue.current[target._id] || aRef.current.answers[target._id];
@@ -291,7 +296,10 @@ export function Exam() {
         value: local?.value || "",
         review: local?.review ?? false,
         visited: true,
-        attachmentIds: [...(local?.attachmentIds || []), uploaded.id],
+        attachmentIds: [
+          ...(local?.attachmentIds || []),
+          ...(uploaded.pages || [uploaded]).map((page) => page.id),
+        ],
         generation: ++seq.current,
       };
       persist();
@@ -578,13 +586,17 @@ export function Exam() {
               <h3>{tr("Upload handwritten answer pages")}</h3>
               <p className="small muted">
                 {tr(
-                  "JPEG, PNG or WebP \xB7 up to 5 MB per page \xB7 maximum four attached pages. Include diagrams in the photo. Save before the exam deadline.",
+                  "Photos: up to 5 MB. PDF: up to 10 MB. Maximum four attached pages per answer. Save before the exam deadline.",
                 )}
               </p>
               <input
                 aria-label={tr("Upload answer sheet")}
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept={
+                  features.data?.pdfSheets
+                    ? "image/jpeg,image/png,image/webp,application/pdf"
+                    : "image/jpeg,image/png,image/webp"
+                }
                 disabled={
                   uploading ||
                   conflict ||

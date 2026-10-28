@@ -13,6 +13,7 @@ export function ManagementPanel({ section }) {
 function Operations() {
   useLanguage();
   const { data, error, reload } = useLoad("/admin/operations");
+  const readiness = useLoad("/admin/readiness");
   return (
     <div className="panel">
       <h2>{tr("Platform operations")}</h2>
@@ -44,9 +45,40 @@ function Operations() {
           )}
         </div>
       )}
-      <button className="button subtle" onClick={reload}>
+      <button
+        className="button subtle"
+        onClick={() => {
+          reload();
+          readiness.reload();
+        }}
+      >
         {tr("Refresh")}
       </button>
+      <h3>{tr("Release readiness")}</h3>
+      <p className="small muted">
+        {tr(
+          "Configured does not mean tested. Provider acceptance and teacher review are required before client launch.",
+        )}
+      </p>
+      <Notice error>{tr(readiness.error)}</Notice>
+      {readiness.data?.integrations.map((item) => (
+        <div className="admin-row" key={item.id}>
+          <div>
+            <strong>{tr(item.label)}</strong>
+            {item.missing.length > 0 && (
+              <small>
+                {tr("Missing configuration")}: {item.missing.join(", ")}
+              </small>
+            )}
+          </div>
+          <span className="tag">{tr(item.status)}</span>
+        </div>
+      ))}
+      <ul className="small muted">
+        {readiness.data?.acceptanceRequired.map((step) => (
+          <li key={step}>{tr(step)}</li>
+        ))}
+      </ul>
     </div>
   );
 }

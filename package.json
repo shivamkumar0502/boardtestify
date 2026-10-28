@@ -26,7 +26,10 @@
     "worker": "npm run worker -w @boardtestify/api",
     "migrate": "npm run migrate -w @boardtestify/api",
     "test:load": "node scripts/load-test.mjs",
-    "calibrate": "node --env-file-if-exists=.env scripts/calibrate.mjs"
+    "calibrate": "node --env-file-if-exists=.env scripts/calibrate.mjs",
+    "preflight": "node --env-file-if-exists=.env scripts/preflight.mjs",
+    "db:backup": "node --env-file-if-exists=.env scripts/database.mjs backup",
+    "db:restore-drill": "node --env-file-if-exists=.env scripts/database.mjs restore-drill"
   },
   "devDependencies": {
     "@playwright/test": "1.56.1",

@@ -1,3 +1,4 @@
+import { answerPDF } from "./fixtures/pdf.js";
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
@@ -25,6 +26,7 @@ process.env.RAZORPAY_KEY_ID = "rzp_test";
 process.env.RAZORPAY_KEY_SECRET = "test-payment-secret";
 process.env.RAZORPAY_WEBHOOK_SECRET = "test-webhook-secret";
 let db, server, s3, base, m, token, otherToken, adminToken, reviewToken;
+let rejectUploadAfter = null;
 const files = new Map();
 const realFetch = global.fetch;
 let aiCalls = [],
@@ -43,6 +45,10 @@ before(async () => {
   s3 = http.createServer(async (req, res) => {
     const key = new URL(req.url, "http://local").pathname;
     if (req.method === "PUT") {
+      if (rejectUploadAfter !== null && rejectUploadAfter-- <= 0) {
+        res.statusCode = 503;
+        return res.end();
+      }
       const parts = [];
       for await (const p of req) parts.push(p);
       files.set(key, Buffer.concat(parts));
@@ -828,6 +834,175 @@ test("an interrupted evaluation lease is recoverable and old lease tokens cannot
     { $set: { evaluationState: "COMPLETE" } },
   );
   assert.equal(stale.matchedCount, 0);
+});
+test("PDF upload returns ordered private pages, enforces reading/deadline/quota and cleans partial storage failures", async () => {
+  const q = await m.QuestionModel.findById(did);
+  const owner = await m.User.findOne({ email: "feature@example.com" });
+  const a = await m.Attempt.create({
+    userId: String(owner._id),
+    testId: String(new mongoose.Types.ObjectId()),
+    snapshot: {
+      title: "PDF fixture",
+      sections: [{ id: "s", questionIds: [did] }],
+    },
+    questions: [{ ...q.data, _id: did, sectionId: "s" }],
+    startedAt: new Date(),
+    deadline: new Date(Date.now() + 120000),
+    readUntil: new Date(Date.now() + 60000),
+  });
+  const send = async (maxPages = 4) => {
+    const body = new FormData();
+    body.append("questionId", did);
+    body.append("maxPages", String(maxPages));
+    body.append(
+      "file",
+      new Blob([answerPDF()], { type: "application/pdf" }),
+      "answers.pdf",
+    );
+    const response = await realFetch(base + `/attempts/${a._id}/sheets`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body,
+    });
+    return { status: response.status, data: await response.json() };
+  };
+  assert.equal((await send()).status, 409);
+  await m.Attempt.updateOne(
+    { _id: a._id },
+    { $set: { readUntil: new Date(Date.now() - 1000) } },
+  );
+  assert.equal((await send(1)).status, 400);
+  rejectUploadAfter = 1;
+  const failed = await send();
+  rejectUploadAfter = null;
+  assert.equal(failed.status, 503);
+  assert.equal(
+    await m.Attachment.countDocuments({ attemptId: String(a._id) }),
+    0,
+  );
+  assert.equal((await m.Attempt.findById(a._id)).uploadCounts[did], 0);
+  const first = await send();
+  assert.equal(first.status, 201);
+  assert.equal(first.data.pages.length, 2);
+  const stored = await m.Attachment.find({ attemptId: String(a._id) }).lean();
+  assert.ok(stored.every((page) => page.mime === "image/jpeg"));
+  assert.equal(
+    (
+      await call(
+        `/attachments/${first.data.pages[0].id}`,
+        undefined,
+        otherToken,
+      )
+    ).status,
+    404,
+  );
+  const raced = await Promise.all([send(), send()]);
+  assert.deepEqual(
+    raced.map((r) => r.status),
+    [201, 201],
+  );
+  assert.equal((await send()).status, 201);
+  assert.equal((await send()).status, 409);
+  assert.equal(
+    await m.Attachment.countDocuments({ attemptId: String(a._id) }),
+    8,
+  );
+  assert.equal((await m.Attempt.findById(a._id)).uploadCounts[did], 8);
+  await m.Attempt.updateOne(
+    { _id: a._id },
+    { $set: { deadline: new Date(Date.now() - 1000) } },
+  );
+  assert.equal((await send()).status, 409);
+});
+test("password reset invalidates every older link and existing sessions", async () => {
+  const { hash, randomToken, accessToken } =
+    await import("../backend/src/lib.js");
+  const u = await m.User.create({
+    name: "Recovery fixture",
+    email: "reset-fixture@example.com",
+    passwordHash: "unused",
+    classLevel: "10",
+    stream: "GENERAL",
+  });
+  const oldAccess = accessToken(u),
+    first = randomToken(),
+    second = randomToken();
+  for (const value of [first, second])
+    await m.Reset.create({
+      userId: String(u._id),
+      authVersion: u.authVersion,
+      hash: hash(value),
+      expiresAt: new Date(Date.now() + 60000),
+    });
+  await m.Session.create({
+    userId: String(u._id),
+    authVersion: u.authVersion,
+    hash: hash(randomToken()),
+    expiresAt: new Date(Date.now() + 60000),
+  });
+  assert.equal(
+    (
+      await call("/auth/reset-password", {
+        token: first,
+        password: "New-fixture-password-123",
+      })
+    ).status,
+    200,
+  );
+  assert.equal((await call("/auth/me", undefined, oldAccess)).status, 401);
+  assert.equal(await m.Session.countDocuments({ userId: String(u._id) }), 0);
+  assert.equal(
+    (
+      await call("/auth/reset-password", {
+        token: second,
+        password: "Another-fixture-password-123",
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await call("/auth/reset-password", {
+        token: first,
+        password: "Another-fixture-password-123",
+      })
+    ).status,
+    400,
+  );
+  // A stale-generation token is rejected even if its document still exists.
+  const stale = randomToken();
+  await m.Reset.create({
+    userId: String(u._id),
+    authVersion: u.authVersion,
+    hash: hash(stale),
+    expiresAt: new Date(Date.now() + 60000),
+  });
+  assert.equal(
+    (
+      await call("/auth/reset-password", {
+        token: stale,
+        password: "Another-fixture-password-123",
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await call("/auth/mobile-login", {
+        email: u.email,
+        password: "New-fixture-password-123",
+      })
+    ).status,
+    200,
+  );
+});
+test("release diagnostics require staff authorization and do not expose credentials", async () => {
+  assert.equal((await call("/admin/readiness")).status, 403);
+  const report = await call("/admin/readiness", undefined, adminToken);
+  assert.equal(report.status, 200);
+  assert.equal(report.data.automaticReleaseApproved, false);
+  assert.ok(!JSON.stringify(report.data).includes("test-payment-secret"));
+  assert.ok(!JSON.stringify(report.data).includes("test-webhook-secret"));
 });
 test("database failure makes readiness/unavailable APIs fail closed while liveness survives", async () => {
   await mongoose.disconnect();

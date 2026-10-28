@@ -809,4 +809,43 @@ export default {
   "MULTIPLE CHOICE": "बहु-विकल्पीय",
   "SHORT ANSWER": "लघु उत्तरीय",
   "LONG ANSWER": "दीर्घ उत्तरीय",
+  "Photos: up to 5 MB. PDF: up to 10 MB. Maximum four attached pages per answer. Save before the exam deadline.":
+    "फोटो: 5 MB तक। PDF: 10 MB तक। प्रत्येक उत्तर में अधिकतम चार पृष्ठ जोड़ें। परीक्षा का समय समाप्त होने से पहले सुरक्षित करें।",
+  "Choose answer PDF": "उत्तर की PDF चुनें",
+  "PDF: up to 10 MB. Maximum four pages including existing photos.":
+    "PDF: 10 MB तक। पहले से जुड़ी फोटो सहित अधिकतम चार पृष्ठ।",
+  "PDF must be smaller than 10 MB": "PDF का आकार 10 MB से कम होना चाहिए",
+  "Reset your password": "अपना पासवर्ड बदलें",
+  "Open the secure reset link in your email, then return here to sign in with your new password.":
+    "ईमेल में मिला सुरक्षित लिंक खोलकर पासवर्ड बदलें, फिर यहाँ नए पासवर्ड से साइन इन करें।",
+  "Reset email address": "पासवर्ड बदलने के लिए ईमेल पता",
+  "Use the website for study pass checkout and administration.":
+    "स्टडी पास खरीदने और प्रशासन के लिए वेबसाइट का उपयोग करें।",
+  "Release readiness": "लॉन्च की तैयारी",
+  "Configured does not mean tested. Provider acceptance and teacher review are required before client launch.":
+    "कॉन्फ़िगरेशन का अर्थ परीक्षण पूरा होना नहीं है। लॉन्च से पहले सेवाओं का परीक्षण और शिक्षक की समीक्षा ज़रूरी है।",
+  "Missing configuration": "अधूरी कॉन्फ़िगरेशन",
+  "Private answer storage": "उत्तर का निजी संग्रहण",
+  "Password reset email": "पासवर्ड बदलने का ईमेल",
+  "AI answer evaluation": "AI उत्तर मूल्यांकन",
+  "Handwriting OCR": "हस्तलिखित उत्तर का OCR",
+  "Phone OTP": "फोन OTP",
+  "Payments and subscriptions": "भुगतान और सदस्यताएँ",
+  "PDF answer sheets": "PDF उत्तर-पुस्तिका",
+  CONFIGURED: "कॉन्फ़िगर किया गया",
+  PARTIAL: "आंशिक",
+  MISSING: "उपलब्ध नहीं",
+  AVAILABLE: "उपलब्ध",
+  "Approve current-session syllabus, questions and board patterns":
+    "वर्तमान सत्र का पाठ्यक्रम, प्रश्न और बोर्ड पैटर्न अनुमोदित करें",
+  "Calibrate AI marks against independent teacher scores":
+    "AI के अंकों की स्वतंत्र शिक्षक के अंकों से जाँच करें",
+  "Test configured providers with client sandbox accounts":
+    "क्लाइंट के सैंडबॉक्स खातों से जुड़ी सेवाओं का परीक्षण करें",
+  "Complete staging load, soak and backup restore checks":
+    "स्टेजिंग लोड, लंबे समय तक चलने और बैकअप रिकवरी की जाँच पूरी करें",
+  "Sign Android release and test physical devices":
+    "Android रिलीज़ पर हस्ताक्षर करें और असली उपकरणों पर परीक्षण करें",
+  "Answer storage is temporarily unavailable. Please retry.":
+    "उत्तर संग्रहण अभी उपलब्ध नहीं है। दोबारा प्रयास करें।",
 };

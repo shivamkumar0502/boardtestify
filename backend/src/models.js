@@ -43,6 +43,7 @@ export const Reset = make(
   "Reset",
   {
     userId: Schema.Types.ObjectId,
+    authVersion: Number,
     hash: { type: String, unique: true },
     expiresAt: Date,
   },
@@ -105,6 +106,7 @@ export const Attempt = make(
     retryOf: String,
     answeredIds: { type: [String], default: [] },
     answerBytes: { type: Number, default: 0 },
+    uploadCounts: { type: Schema.Types.Mixed, default: {} },
     leaseToken: String,
   },
   [

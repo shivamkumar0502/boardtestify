@@ -10,3 +10,12 @@ test-results/
 
 android-export/
 playwright-report/
+
+# Private database archives must never be committed.
+*.archive.gz
+*.manifest.json
+
+# Android signing material stays with the client.
+**/credentials.json
+*.jks
+*.keystore

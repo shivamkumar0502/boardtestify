@@ -371,3 +371,55 @@ export function NativeAccountEditor({ onSaved }) {
     </View>
   );
 }
+
+export function NativePasswordRecovery() {
+  useLanguage();
+  const [email, setEmail] = useState(""),
+    [message, setMessage] = useState(""),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false);
+  async function send() {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const result = await api("/auth/forgot-password", {
+        email: email.trim(),
+      });
+      setMessage(result.message);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <View style={s.card}>
+      <Text style={s.h2}>{tr("Reset your password")}</Text>
+      <Text style={s.muted}>
+        {tr(
+          "Open the secure reset link in your email, then return here to sign in with your new password.",
+        )}
+      </Text>
+      <TextInput
+        accessibilityLabel={tr("Reset email address")}
+        style={s.input}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        autoComplete="email"
+        value={email}
+        onChangeText={setEmail}
+        editable={!busy}
+      />
+      <ErrorText message={error} />
+      {message ? (
+        <Text accessibilityLiveRegion="polite" style={s.muted}>
+          {tr(message)}
+        </Text>
+      ) : null}
+      <Button disabled={busy || !email.trim()} onPress={send}>
+        {busy ? tr("Sending…") : tr("Send reset link")}
+      </Button>
+    </View>
+  );
+}
