@@ -11,3 +11,5 @@ Optional integrations require the client's credentials and real sandbox/live acc
 See CLIENT_HANDOFF.md and QA.md for concrete delivered flows, validation evidence and remaining external release work.
 
 Release tooling now includes a configuration preflight/admin checklist, a Linux API/worker container setup and checksummed database backup/isolated restore-drill commands. These do not activate providers, supply academic content, sign an app or certify hosting. See OPERATIONS.md.
+
+Class 10 and separate Class 12 Science/Arts/Commerce starter content now includes 26 original foundation tests / 474 questions; publication requires staff review. The native test library now supports subject/session series, cursor filters, pattern details and start/resume/results, using the shared API. These are implemented features; complete verified current-year content, activated providers, native purchase distribution policy, device/store and production acceptance remain external work.

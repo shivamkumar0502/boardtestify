@@ -75,7 +75,7 @@ test("pack import requires admin, creates only drafts, is idempotent and preserv
       (await call(tokens[1], { packId: "original-v1" })).status,
       403,
     );
-    assert.equal((await call(tokens[2])).data.length, 3);
+    assert.equal((await call(tokens[2])).data.length, 6);
     assert.equal((await call(tokens[2], { packId: "made-up" })).status, 400);
     assert.equal(
       (await call(tokens[2], { packId: "bseb-2026" })).data.questions,

@@ -11,17 +11,29 @@ import {
   Audit,
 } from "./models.js";
 import { assert, hash } from "./lib.js";
-import { starterContent } from "./starter-content.js";
+import { starterDefinition } from "./starter-definitions.js";
 import { catalogFor } from "./bseb-catalog.js";
 import { validateAcademic } from "./content.js";
 import { validatePatternForTest } from "./management.js";
-const author = "boardtestify-starter-v1";
 export const starterId = "class10-starter";
-const identity = (value) => hash(`${author}:${value}`).slice(0, 24);
-export async function seedStarter() {
-  const packs = starterContent();
+const context = (id) => {
+  const definition = starterDefinition(id);
+  const author = definition.author;
+  return {
+    definition,
+    author,
+    identity: (value) => hash(`${author}:${value}`).slice(0, 24),
+  };
+};
+export async function seedStarter(packId = starterId) {
+  const { definition, author, identity } = context(packId);
+  const packs = definition.content();
   for (const pack of packs) {
-    const scope = { session: "2026-27", classLevel: "10", stream: "GENERAL" };
+    const scope = {
+      session: "2026-27",
+      classLevel: definition.classLevel,
+      stream: definition.stream,
+    };
     let subject = await Academic.findOne({
       ...scope,
       kind: "SUBJECT",
@@ -52,11 +64,11 @@ export async function seedStarter() {
     const academic = { ...scope, subjectId: String(subject._id) };
     let layout;
     if (pack.fullMock) {
-      const ref = catalogFor("10", "GENERAL").find(
-        (s) => s.name === "Mathematics",
+      const ref = catalogFor(definition.classLevel, definition.stream).find(
+        (s) => s.name === pack.subject,
       );
       const data = patternSchema.parse({
-        title: "Mathematics · starter mock · 2026 reference layout",
+        title: `${pack.subject} · starter mock · 2026 reference layout`,
         academic,
         versionLabel: "BSEB model paper 2026 · review for selected session",
         officialSource: ref.sourceUrl,
@@ -67,7 +79,13 @@ export async function seedStarter() {
         sections: ref.sections,
       });
       layout = await Pattern.findOneAndUpdate(
-        { _id: identity("math-layout") },
+        {
+          _id: identity(
+            pack.subject === "Mathematics"
+              ? "math-layout"
+              : `${pack.subject}-layout`,
+          ),
+        },
         {
           $setOnInsert: { data, status: "DRAFT", creator: author, version: 1 },
         },
@@ -128,12 +146,12 @@ export async function seedStarter() {
       title: pack.title,
       academic,
       mode: pack.fullMock ? "BOARD" : "PRACTICE",
-      durationMinutes: pack.fullMock ? 195 : 15,
-      readingMinutes: pack.fullMock ? 15 : 0,
+      durationMinutes: pack.fullMock ? layout.data.durationMinutes : 15,
+      readingMinutes: pack.fullMock ? layout.data.readingMinutes : 0,
       premium: false,
       feedbackMode: pack.fullMock ? "AFTER_SUBMISSION" : "IMMEDIATE",
       description: pack.fullMock
-        ? "138 original foundation questions: 100 MCQs, 30 short and 8 long answers; answer 50/15/4 for 100 marks. Full-length 2026 reference layout, not an official paper or complete syllabus coverage. Descriptive marks require review."
+        ? `${rows.length} original foundation questions; answer ${pack.sections.map((s) => s.maxAnswers).join("/")} for ${layout.data.totalMarks} theory marks. Full-length 2026 reference layout; descriptive marks require review. Practical/internal assessment is separate. Not an official paper or complete syllabus coverage.`
         : "10 original foundation MCQs with keys and explanations. Free practice, not an official board paper or complete syllabus.",
       ...(layout
         ? {
@@ -157,13 +175,18 @@ export async function seedStarter() {
     status: "DRAFT",
   };
 }
-export async function starterReview() {
+export async function starterReview(packId = starterId) {
+  const { definition, identity } = context(packId);
   const tests = await TestModel.find({
-    _id: { $in: starterContent().map((p) => identity(`test:${p.id}`)) },
+    _id: { $in: definition.content().map((p) => identity(`test:${p.id}`)) },
   })
     .sort({ "data.mode": -1, "data.academic.subjectId": 1 })
     .lean();
-  assert(tests.length === 7, 409, "Import the Class 10 starter pack first.");
+  assert(
+    tests.length === definition.content().length,
+    409,
+    "Import this starter pack first.",
+  );
   const ids = [
     ...new Set(
       tests.flatMap((t) => t.data.sections.flatMap((s) => s.questionIds)),
@@ -194,14 +217,18 @@ export async function starterReview() {
       data: r.data,
     }));
   return {
+    packId,
+    classLevel: definition.classLevel,
+    stream: definition.stream,
     tests,
     questions,
     patterns,
     reviewToken: hash(JSON.stringify(snapshot)),
   };
 }
-export async function publishStarter(req, input) {
-  const review = await starterReview();
+export async function publishStarter(req, input, packId = starterId) {
+  const { identity } = context(packId);
+  const review = await starterReview(packId);
   assert(
     review.reviewToken === input.reviewToken,
     409,

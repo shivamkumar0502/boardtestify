@@ -1037,7 +1037,7 @@ function Audit() {
 function PracticePackImporter({ onImported }) {
   useLanguage();
   const { data, error } = useLoad("/admin/practice-packs");
-  const [reviewing, setReviewing] = useState(false);
+  const [reviewing, setReviewing] = useState("");
   const [busy, setBusy] = useState(""),
     [err, setError] = useState(""),
     [message, setMessage] = useState("");
@@ -1054,7 +1054,7 @@ function PracticePackImporter({ onImported }) {
         ),
       );
       onImported();
-      if (packId === "class10-starter") setReviewing(true);
+      if (packId.endsWith("-starter")) setReviewing(packId);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -1071,41 +1071,56 @@ function PracticePackImporter({ onImported }) {
       </p>
       <Notice error>{error || err}</Notice>
       <Notice>{message}</Notice>
-      {data?.map((pack) => (
-        <div className="admin-row" key={pack.id}>
-          <div>
-            <h3>{tr(pack.title)}</h3>
-            <p className="muted small">{tr(pack.note)}</p>
-            <small>
-              {tr("{0} tests · {1} questions · session {2}", [
-                pack.tests,
-                pack.questions,
-                pack.session,
-              ])}
-            </small>
-          </div>
-          <button
-            className="button subtle"
-            disabled={!!busy}
-            onClick={() => importPack(pack.id)}
-          >
-            {busy === pack.id
-              ? tr("Importing…")
-              : pack.id === "class10-starter"
-                ? tr("Import actual tests & review")
-                : tr("Import draft pack")}
-          </button>
-          {pack.id === "class10-starter" && (
-            <button className="button ghost" onClick={() => setReviewing(true)}>
-              {tr("Open starter test review")}
+      {[...(data || [])]
+        .sort(
+          (a, b) =>
+            Number(
+              b.id === new URLSearchParams(window.location.search).get("pack"),
+            ) -
+            Number(
+              a.id === new URLSearchParams(window.location.search).get("pack"),
+            ),
+        )
+        .map((pack) => (
+          <div className="admin-row" key={pack.id}>
+            <div>
+              <h3>{tr(pack.title)}</h3>
+              <p className="muted small">{tr(pack.note)}</p>
+              <small>
+                {tr("{0} tests · {1} questions · session {2}", [
+                  pack.tests,
+                  pack.questions,
+                  pack.session,
+                ])}
+              </small>
+            </div>
+            <button
+              className="button subtle"
+              disabled={!!busy}
+              onClick={() => importPack(pack.id)}
+            >
+              {busy === pack.id
+                ? tr("Importing…")
+                : pack.id.endsWith("-starter")
+                  ? tr("Import actual tests & review")
+                  : tr("Import draft pack")}
             </button>
-          )}
-        </div>
-      ))}
+            {pack.id.endsWith("-starter") && (
+              <button
+                className="button ghost"
+                onClick={() => setReviewing(pack.id)}
+              >
+                {tr("Open starter test review")}
+              </button>
+            )}
+          </div>
+        ))}
       {reviewing && (
         <StarterReview
+          key={reviewing}
+          packId={reviewing}
           onPublished={onImported}
-          onClose={() => setReviewing(false)}
+          onClose={() => setReviewing("")}
         />
       )}
     </section>

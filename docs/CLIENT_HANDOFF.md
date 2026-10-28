@@ -68,3 +68,11 @@ For the subject dropdown, use **Set up BSEB subjects & paper layouts**, or add y
 ### Making actual Class 10 tests visible
 
 Academic setup only creates subjects/layouts; it does not publish question content. For the six-subject starter, open Test library → Add actual tests → Import actual tests & review. It contains 7 actual tests / 198 original foundation questions (six 10-MCQ tests plus a full 138-question Mathematics mock). Review a test's questions, keys and marking, then confirm and publish that test. A real student can then start it from the corresponding subject series. The mock's draft reference layout is shown and approved with that review. Own staff edits still need a different administrator. These are original foundation exercises, not official BSEB papers or complete coverage; Class 12 packs remain separate.
+
+## Additional Class 12 content and native series
+
+Import the desired Class 12 Science/Arts/Commerce starter from Administration → Tests, review the questions/keys/layout and publish each test. Science: 7 tests / 156 questions including a full 96-question Physics mock. Arts: 6 tests / 60 questions. Commerce: 6 tests / 60 questions. These 19 tests are original foundation content, not a complete syllabus or official paper collection. The Physics layout references the 2026 paper and keeps 70 theory marks separate from practical assessment. Existing Class 10 identities and staff edits/publication remain preserved.
+
+Web and Android now both discover subject series through the same paginated API. Native includes subject/session search, category/mode/free/chapter filters, source-linked pattern details, resume/result navigation and profile refresh. Workers/provider credentials are still required for configured AI/cloud jobs; native study-pass checkout uses the website. A successful bundle export does not replace signed-build and physical-device acceptance.
+
+Remaining release work requires client-owned inputs: actual cloud-provider/payment/mail/storage settings and acceptance, verified exam-year syllabus/PYQs/content approval, teacher-labelled marking calibration, Android signing/store distribution choice, and production hosting/backup/load validation. This update does not activate those external accounts.

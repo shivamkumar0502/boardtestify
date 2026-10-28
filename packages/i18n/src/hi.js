@@ -1043,4 +1043,12 @@ export default {
     "कक्षा 10 स्टार्टर में छह विषयों के अभ्यास टेस्ट और पूरा गणित मॉक है: 7 टेस्ट, 198 मौलिक प्रश्न। प्रशासन से आयात करें, उत्तर जाँचें और प्रकाशित करें।",
   "These are real original foundation questions with suggested keys. Review them before making a test available to students. The full Maths mock follows the 2026 reference layout; it is not an official paper or complete syllabus coverage.":
     "इन मौलिक आधारभूत प्रश्नों और सुझाए उत्तरों को विद्यार्थियों के लिए प्रकाशित करने से पहले जाँचें। पूरा गणित मॉक 2026 के संदर्भ प्रारूप पर है; यह आधिकारिक पेपर या संपूर्ण पाठ्यक्रम नहीं है।",
+  "Full mock: {0} theory marks · {1} min total · {2} min reading":
+    "पूर्ण मॉक: {0} लिखित अंक · कुल {1} मिनट · पढ़ने के {2} मिनट",
+  "Class 12 Science, Arts and Commerce have separate starter packs. Choose your stream, review the questions and publish actual tests. Science includes a full Physics mock.":
+    "कक्षा 12 विज्ञान, कला और वाणिज्य के अलग स्टार्टर पैक हैं। संकाय चुनें, प्रश्न जाँचें और टेस्ट प्रकाशित करें। विज्ञान में पूरा भौतिकी मॉक भी है।",
+  "Original foundation questions with suggested keys and marking rubrics. Review each test before student publication. Full mocks use a 2026 reference layout and separate theory marks from practical/internal assessment. They do not establish complete syllabus coverage.":
+    "सुझाए उत्तर और अंकन मानदंड सहित मौलिक आधारभूत प्रश्न। विद्यार्थियों के लिए प्रकाशित करने से पहले प्रत्येक टेस्ट जाँचें। पूर्ण मॉक 2026 संदर्भ प्रारूप पर हैं; लिखित अंक प्रायोगिक/आंतरिक अंकों से अलग हैं। ये संपूर्ण पाठ्यक्रम का दावा नहीं करते।",
+  "Original foundation questions, keys and descriptive rubrics where applicable. Import, review and publish each test. Reference layouts require exam-year review.":
+    "मौलिक आधारभूत प्रश्न, उत्तर और जहाँ लागू हों वहाँ वर्णनात्मक अंकन मानदंड। प्रत्येक टेस्ट आयात करके समीक्षा और प्रकाशन करें। संदर्भ प्रारूप को परीक्षा वर्ष के लिए जाँचें।",
 };

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { NativeSeries } from "../src/series";
+import { useEffect, useState, useRef } from "react";
 import {
   Text,
   TextInput,
@@ -27,6 +28,7 @@ import { s, Button, ErrorText } from "../src/ui";
 export default function Home() {
   useLanguage();
   const router = useRouter();
+  const loadVersion = useRef(0);
   const [showOtp, setShowOtp] = useState(false);
   const [showRecovery, setShowRecovery] = useState(false);
   const [ready, setReady] = useState(false),
@@ -40,7 +42,7 @@ export default function Home() {
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [tab, setTab] = useState("Tests"),
-    [tests, setTests] = useState([]),
+    [seriesVersion, setSeriesVersion] = useState(0),
     [attempts, setAttempts] = useState([]);
   useEffect(() => {
     restore()
@@ -49,12 +51,18 @@ export default function Home() {
   }, []);
   const load = useCallback(async () => {
     if (!signed) return;
+    const version = ++loadVersion.current;
+    const scope = `${user?.id}:${user?.classLevel}:${user?.stream}`;
+    setSeriesVersion((n) => n + 1);
     try {
-      const [t, a] = await Promise.all([api("/tests"), api("/attempts")]);
-      setTests(t);
-      setAttempts(a);
+      const a = await api("/attempts");
+      if (
+        version === loadVersion.current &&
+        scope === `${user?.id}:${user?.classLevel}:${user?.stream}`
+      )
+        setAttempts(a);
     } catch (e) {
-      setError(e.message);
+      if (version === loadVersion.current) setError(e.message);
     }
   }, [signed]);
   useFocusEffect(
@@ -78,18 +86,6 @@ export default function Home() {
       else await login(email, password);
       setSigned(true);
       setPassword("");
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function start(id) {
-    setBusy(true);
-    setError("");
-    try {
-      const a = await api(`/tests/${id}/start`, {});
-      router.push(`/exam/${a.id}`);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -295,50 +291,11 @@ export default function Home() {
               {tab === "Tests" ? (
                 <>
                   <NativeAnnouncements />
-                  {tests.length ? (
-                    tr(
-                      tests.map((t) => (
-                        <View key={t.id} style={s.card}>
-                          <Text style={s.eyebrow}>
-                            {tr(t.mode)}
-                            {tr(" \xB7 ")}
-                            {t.premium ? tr("STUDY PASS") : tr("FREE")}
-                          </Text>
-                          <Text style={s.h2}>{tr(t.title)}</Text>
-                          <Text style={s.muted}>{tr(t.description)}</Text>
-                          <Text
-                            style={[
-                              s.small,
-                              {
-                                marginTop: 15,
-                              },
-                            ]}
-                          >
-                            {t.durationMinutes
-                              ? tr("{0} minutes", [t.durationMinutes])
-                              : tr("Untimed")}
-                            {tr(" ")}
-                            {tr("\xB7 ")}
-                            {tr(t.sections.reduce((n, s) => n + s.count, 0))}
-                            {tr(" ")}
-                            {tr("questions")}
-                          </Text>
-                          <Button disabled={busy} onPress={() => start(t.id)}>
-                            {tr("Start test \u2197")}
-                          </Button>
-                        </View>
-                      )),
-                    )
-                  ) : (
-                    <View style={s.card}>
-                      <Text style={s.h2}>
-                        {tr("More practice is on the way.")}
-                      </Text>
-                      <Text style={s.muted}>
-                        {tr("No approved tests for this class/stream yet.")}
-                      </Text>
-                    </View>
-                  )}
+                  <NativeSeries
+                    key={`${user?.classLevel}:${user?.stream}`}
+                    refreshKey={seriesVersion}
+                    onProfile={() => setTab("Profile")}
+                  />
                 </>
               ) : tab === "Attempts" ? (
                 attempts.length ? (
@@ -403,9 +360,10 @@ export default function Home() {
                   <Button
                     secondary
                     onPress={async () => {
+                      loadVersion.current++;
                       await logout();
                       setSigned(false);
-                      setTests([]);
+                      setSeriesVersion(0);
                       setAttempts([]);
                     }}
                   >

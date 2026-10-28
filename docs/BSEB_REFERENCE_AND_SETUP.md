@@ -23,13 +23,13 @@ Official references:
 
 `backend/src/bseb-catalog.js` records the paper URL, reference year, separate theory/other assessment marks, writing/reading time, offered questions, answer limits and marks per response. Negative marking is zero. Full mock answer limits retain the existing first-answered-in-paper-order policy.
 
-| Reference | Offered → answer | Theory / other assessment |
-| --- | --- | --- |
-| X Mathematics | 100→50 MCQ, 30→15 short ×2, 8→4 long ×5 | 100 / 0 |
-| X Science | 80→40 MCQ; short: 8→4 ×2 **each** in Physics/Chemistry/Biology; long: 2→1 **each**, Physics ×6, Chemistry/Biology ×5 | 80 / 20 |
-| X Social Science | 80→40 MCQ; short: History 6→3, Political Science 4→2, Economics 4→2, Geography 6→3, Disaster Management 4→2, all ×2; long: 2→1 ×4 each in History/Political Science/Economics/Geography | 80 / 20 |
-| XII Physics/Chemistry/Biology, Computer Science and other checked 70-mark papers | 70→35 MCQ, 20→10 short ×2, 6→3 long ×5 | 70 / 30 |
-| XII Mathematics, Business Studies, Accountancy, Economics, History, Political Science, Sociology, Philosophy | 100→50 MCQ, 30→15 short ×2, 8→4 long ×5 | 100 / 0 |
+| Reference                                                                                                    | Offered → answer                                                                                                                                                                        | Theory / other assessment |
+| ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| X Mathematics                                                                                                | 100→50 MCQ, 30→15 short ×2, 8→4 long ×5                                                                                                                                                 | 100 / 0                   |
+| X Science                                                                                                    | 80→40 MCQ; short: 8→4 ×2 **each** in Physics/Chemistry/Biology; long: 2→1 **each**, Physics ×6, Chemistry/Biology ×5                                                                    | 80 / 20                   |
+| X Social Science                                                                                             | 80→40 MCQ; short: History 6→3, Political Science 4→2, Economics 4→2, Geography 6→3, Disaster Management 4→2, all ×2; long: 2→1 ×4 each in History/Political Science/Economics/Geography | 80 / 20                   |
+| XII Physics/Chemistry/Biology, Computer Science and other checked 70-mark papers                             | 70→35 MCQ, 20→10 short ×2, 6→3 long ×5                                                                                                                                                  | 70 / 30                   |
+| XII Mathematics, Business Studies, Accountancy, Economics, History, Political Science, Sociology, Philosophy | 100→50 MCQ, 30→15 short ×2, 8→4 long ×5                                                                                                                                                 | 100 / 0                   |
 
 For X Hindi/Sanskrit/English and XII Hindi/English, language-specific passage/writing/literature groups replace a generic short/long split. Compound passage questions must retain their subparts and marking rubric. Printed top-level question-group counts differ from individual answer choices: e.g. Hindi X reports 100 MCQs + six descriptive groups, not 138 generic questions. The Science X cover contains a conflicting total; the stored 110 follows the detailed section instructions and actual 80+24+6 structure. Review those instructions, not only the cover total.
 
@@ -47,6 +47,6 @@ JPEG/PNG/WebP up to 5 MB and 24 million decoded pixels are accepted, then resize
 
 ## Series library
 
-Configured subjects remain visible even before tests are published, with an explicit empty count. Cards show actual published/free counts and reference theory marks. Students can search subjects, select a session, inspect the subject/mark guide, and filter a subject's published tests by full mocks, chapter tests, topic tests or subject practice. Existing mode/search/access/chapter/cursor filters, resume/results and server-side entitlements remain enforced. Publication/class/stream filtering applies to every result; draft questions/keys stay private. This release changes the website; the native app keeps its compatible existing listing.
+Configured subjects remain visible even before tests are published, with an explicit empty count. Cards show actual published/free counts and reference theory marks. Students can search subjects, select a session, inspect the subject/mark guide, and filter a subject's published tests by full mocks, chapter tests, topic tests or subject practice. Existing mode/search/access/chapter/cursor filters, resume/results and server-side entitlements remain enforced. Publication/class/stream filtering applies to every result; draft questions/keys stay private. The native app now also uses subject/session series and cursor filters; the older flat API remains compatible.
 
 After merging, run `npm ci` and `npm run migrate`, then `npm run dev`. Production keeps the separate background-worker setup described in `SERIES_AND_QUESTION_IMPORT.md`. No live client database was changed by local checks.

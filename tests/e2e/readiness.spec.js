@@ -465,6 +465,13 @@ test("administrator imports actual starter questions, reviews a test and starts 
     .getByRole("link", { name: "Add actual tests", exact: true })
     .click();
   await page
+    .locator(".admin-row")
+    .filter({
+      has: page.getByRole("heading", {
+        name: "Class 10 · six-subject starter + full Maths mock",
+        exact: true,
+      }),
+    })
     .getByRole("button", { name: "Import actual tests & review", exact: true })
     .click();
   const review = page.getByRole("region", {
@@ -520,4 +527,126 @@ test("administrator imports actual starter questions, reviews a test and starts 
   await page.getByRole("button", { name: "Start test", exact: true }).click();
   await expect(page.getByText(question, { exact: true })).toBeVisible();
   await expect(page.getByRole("radio")).toHaveCount(4);
+});
+
+test("Class 12 stream packs publish real questions and appear for the matching student", async ({
+  page,
+}, info) => {
+  test.setTimeout(90000);
+  const science = info.project.name === "desktop",
+    stream = science ? "SCIENCE" : "ARTS",
+    packId = `class12-${stream.toLowerCase()}-starter`;
+  await login(page, "reviewer@fixture.example");
+  await page.goto(`/app/admin?tab=Tests&pack=${packId}`);
+  await page
+    .locator(".admin-row")
+    .filter({
+      has: page.getByRole("heading", {
+        name: new RegExp(`^Class 12 ${stream} · six-subject starter`),
+      }),
+    })
+    .getByRole("button", { name: "Import actual tests & review", exact: true })
+    .click();
+  const review = page.getByRole("region", {
+    name: "Review starter tests",
+    exact: true,
+  });
+  await review
+    .getByRole("button", {
+      name: science
+        ? /^Physics · Full mock 01/
+        : /^Indian national movement · Practice 01/,
+    })
+    .click();
+  if (science) {
+    await expect(
+      review.getByText(
+        "Full mock: 70 theory marks · 195 min total · 15 min reading",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    while (
+      await review
+        .getByRole("button", {
+          name: "Show next questions for review",
+          exact: true,
+        })
+        .count()
+    )
+      await review
+        .getByRole("button", {
+          name: "Show next questions for review",
+          exact: true,
+        })
+        .click();
+  }
+  await review
+    .getByRole("checkbox", {
+      name: "I reviewed all questions, answer keys and marking shown for this test.",
+      exact: true,
+    })
+    .check();
+  await review
+    .getByRole("button", {
+      name: "Publish this test for students",
+      exact: true,
+    })
+    .click();
+  await expect(
+    review.getByText("Published. Students can now start this test.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  const context = await page
+    .context()
+    .browser()
+    .newContext({ viewport: page.viewportSize() });
+  try {
+    const student = await context.newPage();
+    await student.goto("http://127.0.0.1:4173/register");
+    await student.getByLabel("Full name").fill("Class Twelve Student");
+    await student
+      .getByLabel("Email address")
+      .fill(`twelve-${info.project.name}@fixture.example`);
+    await student
+      .getByLabel("Password", { exact: true })
+      .fill("Class-twelve-password-123");
+    await student
+      .getByRole("combobox", { name: "Class", exact: true })
+      .selectOption("12");
+    await student
+      .getByRole("combobox", { name: "Stream", exact: true })
+      .selectOption(stream);
+    await student
+      .getByRole("button", { name: "Create account", exact: true })
+      .click();
+    await student
+      .getByRole("link", { name: "Explore tests", exact: true })
+      .click();
+    const card = student
+      .locator(".test-card")
+      .filter({ hasText: "2026-27" })
+      .filter({
+        has: student.getByRole("heading", {
+          name: science ? "Physics" : "History",
+          exact: true,
+        }),
+      });
+    await expect(
+      card.getByText("1 tests · 1 free", { exact: true }),
+    ).toBeVisible();
+    await card.getByRole("button", { name: "View tests", exact: true }).click();
+    await student.screenshot({
+      path: info.outputPath("class12-published-tests.png"),
+      fullPage: true,
+    });
+    await student
+      .getByRole("button", { name: "Start test", exact: true })
+      .click();
+    await expect(student.getByRole("radio")).toHaveCount(4);
+    if (science)
+      await expect(student.getByText(/Reading time/).first()).toBeVisible();
+  } finally {
+    await context.close();
+  }
 });

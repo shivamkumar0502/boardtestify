@@ -1,5 +1,11 @@
 import { originalPracticePacks } from "./practice-packs.js";
-const choice = (text, translation, answers, index = 0, explanation = "") => {
+export const choice = (
+  text,
+  translation,
+  answers,
+  index = 0,
+  explanation = "",
+) => {
   const offset = index % 4,
     ordered = [...answers.slice(offset), ...answers.slice(0, offset)];
   return {
@@ -13,7 +19,7 @@ const choice = (text, translation, answers, index = 0, explanation = "") => {
     explanation: explanation || `Correct answer / सही उत्तर: ${answers[0]}.`,
   };
 };
-const numeric = (text, hi, answer, explanation, index) =>
+export const numeric = (text, hi, answer, explanation, index) =>
   choice(
     text,
     hi,
@@ -21,11 +27,11 @@ const numeric = (text, hi, answer, explanation, index) =>
     index,
     explanation,
   );
-const verbal = (items) =>
+export const verbal = (items) =>
   items.map(([text, translation, right, ...wrong], i) =>
     choice(text, translation, [right, ...wrong], i),
   );
-const short = (text, translation, answer, maximumMarks, rubric) => ({
+export const short = (text, translation, answer, maximumMarks, rubric) => ({
   type: maximumMarks === 5 ? "LONG_ANSWER" : "SHORT_ANSWER",
   text,
   translation,
