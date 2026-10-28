@@ -2,91 +2,87 @@
 
 **Practice Smart. Prepare Better. Score Higher.**
 
-Bihar Board Class 10 and Class 12 (Arts, Science, Commerce) preparation. React **JavaScript/JSX**, Node.js/Express **JavaScript**, MongoDB/Mongoose and React Native/Expo **JavaScript/JSX**. The interface uses black/charcoal surfaces and orange accents. There are no general competitive-exam modules.
+Bihar Board Class 10 and Class 12 Arts, Science and Commerce preparation. React **JavaScript/JSX**, Node.js/Express **JavaScript**, MongoDB/Mongoose, and React Native/Expo **JavaScript/JSX**. Black/charcoal UI with orange accents; Hindi and English interface catalogs. No general competitive-exam modules.
 
-## Run locally
+## Run from VS Code
 
-Requirements: Node.js 22+, npm, a local MongoDB server or MongoDB Atlas database.
+Requirements: Node.js 22+, npm and local MongoDB or MongoDB Atlas.
 
 ```bash
 npm ci
 cp .env.example .env
 ```
 
-Edit `.env`: set `MONGODB_URI`, generate your own `JWT_SECRET` (48+ random characters), and keep `WEB_ORIGIN=http://localhost:5173` for development. Do not commit `.env`.
+On Windows, copy `.env.example` to `.env` using Explorer or `copy .env.example .env`. Configure `MONGODB_URI`, `WEB_ORIGIN=http://localhost:5173` and a random `JWT_SECRET` of at least 48 characters. Generate a secret locally with `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`.
 
 ```bash
+npm run migrate
 npm run seed
 npm run dev
 ```
 
-Open `http://localhost:5173`. Register a student account. A Class 10 / General student can try the original, clearly labeled two-question sample. The seed is idempotent and **does not claim to contain official BSEB questions, syllabus, or exam patterns**. Other classes/streams show approved content when administrators add it.
+Open **http://localhost:5173**. Register a Class 10 / General account to try the clearly labeled original sample test. The seed also adds official 2026 reference links, subject metadata and five **draft** model-paper patterns; it does not create a complete official question bank or guess current-session chapters.
 
-Create your first super administrator by setting `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the shell for this command:
+## Separate application folders
 
-```bash
-npm run admin
-```
+| Folder                 | Purpose                                               | Command from repository root |
+| ---------------------- | ----------------------------------------------------- | ---------------------------- |
+| `frontend/`            | React website, student screens, visual administration | `npm run dev:frontend`       |
+| `backend/`             | Express API, MongoDB, authentication and integrations | `npm run dev:backend`        |
+| `app/`                 | Native Expo student application                       | `npm run dev:app`            |
+| `packages/domain/`     | Runtime schemas, scoring and answer states            | Shared                       |
+| `packages/api-client/` | JSON and multipart HTTP client                        | Shared                       |
+| `packages/i18n/`       | Hindi/English interface translations                  | Shared                       |
 
-The password must contain 12+ characters. No default administrator credentials exist. Register a separate staff account and promote it in Administration → Users. Question authors cannot approve their own questions. Configure subjects for the right session/class/stream, add chapters, save questions as drafts, have another administrator approve them, then publish a test.
+Install from the repository root so npm links shared workspaces. `npm run dev` starts frontend and backend together.
 
-## Workspace
+## Implemented product flows
 
-The three applications are in separate top-level folders: `frontend/` for the React website, `backend/` for the Node.js API, and `app/` for the Android application. Install dependencies from the repository root with `npm ci`; shared validation and API code stays in `packages/`.
+- Email/password registration, password reset through SMTP, secure web/native sessions, phone linking and OTP sign-in through Twilio Verify, profile/class/stream/language updates, and five server-enforced roles.
+- Visual question and test editors: academic selectors, MCQ options/keys, descriptive references, alternatives, configurable quarter/half/whole-mark rubrics, diagrams, images, sections, random selection, internal choices and source-backed patterns. Advanced JSON remains optional.
+- Subject/chapter/topic administration, source verification, draft/review/publication controls, CSV/Excel question import with per-row validation, archive expansion checks and duplicate detection, and AI-assisted original question drafts.
+- Persistent CBT attempts with server deadlines, optional reading periods, autosave/offline queues, revision checks, reconnect/resume, review palettes, repeat-safe submission, timeout finalization and immutable question snapshots.
+- Practice feedback after saving objective answers and targeted retry of incorrect or unanswered questions. Full mocks keep answer keys hidden until submission.
+- Typed answer evaluation and handwritten photo uploads. Validated/re-encoded private images go through Google Vision OCR; an image-capable configured AI model can inspect handwriting/diagrams. Teacher review is required for handwritten/diagram marks. Invalid or unavailable providers do not become zero marks.
+- Student results/progress, official-reference library, class/stream-scoped announcements, administrative queue/health counters and compact audit history.
+- Configurable one-time study plans and Razorpay recurring subscriptions, provider-verified captured payments, invoice/subscription matching, cancellation of renewals, full-refund access revocation and replay-safe entitlements.
 
-Run each application from the root with `npm run dev:frontend`, `npm run dev:backend`, or `npm run dev:app`. `npm run dev` starts the website and API together.
+## Administration
 
-| Path                  | Responsibility                                                                                |
-| --------------------- | --------------------------------------------------------------------------------------------- |
-| `frontend`            | React/Vite, React Router, Tailwind, student dashboard, CBT, results and administration        |
-| `backend`             | Express REST API, auth, RBAC, content, attempt persistence, evaluation queue and integrations |
-| `app`                 | Native Expo Router student app, secure refresh tokens, exam and result screens                |
-| `packages/domain`     | Shared Zod validation, question states, scoring and AI evaluation arithmetic                  |
-| `packages/api-client` | Shared HTTP client and error type                                                             |
-| `tests`               | Unit, MongoDB-backed API integration and browser tests                                        |
+Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in your shell, then run `npm run admin`. The password must contain at least 12 characters. No default production credentials exist. Remove the bootstrap password environment variable afterward.
 
-No application source uses TypeScript. Type packages appearing in the lockfile are transitive tooling dependencies.
+Register a second staff account and promote it through a super administrator. Question authors cannot approve their own latest changes. Academic source verification and pattern approval also require a different administrator. A board mock must match an approved pattern's subject/session, duration, counts, marks and question types.
 
-## Implemented flows
+Use the seed's historical 2026 models as references only. The Science model's summary question count differs from its detailed instructions; its draft configuration follows the detailed section instructions and still needs teacher approval. Current syllabus chapters/PYQs and marking rubrics must be supplied or verified by the client’s academic team before publishing courses.
 
-- Email/password registration, login, web refresh cookie, mobile refresh-token rotation, logout and SMTP-backed password reset.
-- Five server-enforced roles; student class/stream filtering; staff accounts and audit logs.
-- Session-versioned subject/chapter/topic records; question drafts, second-person publication, test publication and versioned snapshots.
-- Single/multiple choice, numerical, short/long answers; bilingual question text, optional images, negative marks, section instructions, randomized selection and internal-choice answer limits.
-- Server deadlines, resume, answer revision checks, atomic submission, timeout finalization, durable answer queue on the web/native client, review palette and final/provisional results.
-- Persistent MongoDB evaluation jobs, optional server-side AI provider, validated criterion scores, low-confidence/failure manual review and recorded human corrections.
-- CSV/XLSX preview/import with row errors and duplicate detection; AI-assisted question drafts requiring approval.
-- Score/progress dashboard, one-time Razorpay 30-day study pass with captured-payment verification, signed webhooks and idempotent entitlements.
-- Private S3 image upload policy and attempt-scoped signed image retrieval.
+## Reliable deployment
 
-## Android development
+Build with `npm ci && npm run build`. Run `npm run migrate` against the intended database before starting production processes. Start the API with `npm start -w @boardtestify/api`; it serves the React build and `/api` on one origin.
 
-Set `EXPO_PUBLIC_API_URL` to an API address accessible to the device. An Android emulator can use `http://10.0.2.2:4000/api`; a physical device needs your computer's LAN address or an HTTPS server. Run from `app`:
+For multiple API replicas, set `RUN_WORKER=false` on API processes. Run `npm run worker` separately with the same database/provider configuration and bounded `WORKER_CONCURRENCY`. MongoDB-backed rate windows and fenced evaluation leases are shared across replicas. Set `TRUST_PROXY_HOPS` to the exact number of trusted reverse proxies, not an unrestricted trust flag.
 
-```bash
-npm run dev
-npx expo install --check
-```
+Connection pools, wait queues, body sizes, upload pixels, import expansion, heavy reads, authentication and worker concurrency are bounded. Readiness is `/api/health`; liveness is `/api/live`. These controls reduce overload risk, but cannot guarantee that an untested hosting plan will never fail.
 
-The app supports registration/login, test catalog, attempts, native CBT, queued answer saves, secure session storage and results. Staff administration, password-reset links and payment checkout currently use the website.
+## Android
 
-`eas.json` includes APK preview and Android App Bundle production profiles. Building a release `.aab` requires an Expo/EAS account or an Android build environment and your own signing credentials. No signed Android release is included here. Change the package ID if your organization owns a different application ID.
+Set `EXPO_PUBLIC_API_URL` to your HTTPS API or emulator-reachable development URL. An Android emulator can use `http://10.0.2.2:4000/api`. Run `npm run dev:app`. Native students can register/sign in, link phones, switch language, see announcements/references, edit profiles, attempt exams, photograph/upload answers, view feedback and retry questions. Subscription status/cancellation are available; purchases and staff administration use the website in this version.
 
-## Checks
+`app/eas.json` defines preview APK and production AAB profiles. A JS bundle export is not a signed Android release. Expo/Android signing credentials and real-device acceptance are required before distribution.
+
+## Validation
 
 ```bash
 npm run check
 npm test
 npm run test:integration
-npm run build
-npx playwright install chromium
-npx playwright test
+npm run test:e2e
+npm run test:load
 ```
 
-Integration and E2E tests start an isolated MongoDB instance (first run downloads MongoDB). `TEST_MONGODB_URI` can point integration tests at a **dedicated disposable test database**: the tests delete its contents. Never use a production database. E2E tests use actual API/database flows, not mocked scoring.
+First browser run: `npx playwright install chromium`. Integration/load/browser tests use isolated MongoDB instances. `TEST_MONGODB_URI`, if used by the original integration suite, must refer to a **disposable** database: that test deletes its contents. Never point tests at production.
 
-## Configuration and release status
+`npm run test:load` runs a disposable synthetic exam workload, not a public load attack or a hosting-capacity certificate. `npm run calibrate -- /absolute/path/teacher-cases.json` evaluates teacher-labelled typed-answer cases using your actual AI configuration; it never grants automatic release approval.
 
-See [deployment](docs/DEPLOYMENT.md), [API](docs/API.md), [CBT engine](docs/CBT_ENGINE.md), [AI evaluation](docs/AI_EVALUATION.md), [database](docs/DATABASE.md) and [scope](docs/PRD.md).
+See [client handoff](docs/CLIENT_HANDOFF.md), [validation evidence](docs/QA.md), [deployment](docs/DEPLOYMENT.md), [API](docs/API.md), [CBT](docs/CBT_ENGINE.md), [AI evaluation](docs/AI_EVALUATION.md), and [scope](docs/PRD.md).
 
-This is a functional initial implementation, not a claim that the entire master specification is production-certified. Official academic content and exam distributions must be verified and approved before use. Provider credentials, real payment/webhook testing, Android device/release testing, privacy/retention policies, backups and load testing remain release work. Handwritten answer-sheet OCR, diagram interpretation, phone OTP, a full translation of every screen, announcements and polished field-by-field question/test builders are not implemented. Current staff question/test editing uses validated JSON. AI supports typed descriptive answers; it is feedback for practice, not official BSEB grading.
+No real paid-provider activation, official-content approval, signed AAB, production deployment, backup restoration or physical-device certification is implied by local tests.

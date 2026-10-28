@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { randomInt } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
   answerSchema,
@@ -7,13 +7,24 @@ import {
   hasAnswer,
   isDescriptive,
   scoreObjective,
+  answerPresent,
 } from "@boardtestify/domain";
-import { Attempt, TestModel, QuestionModel, Payment, Audit } from "./models.js";
+import {
+  Attempt,
+  TestModel,
+  QuestionModel,
+  Payment,
+  Audit,
+  Attachment,
+} from "./models.js";
 import { auth, allow, assert, HttpError } from "./lib.js";
 import { evaluate } from "./evaluation.js";
 import { env } from "./config.js";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { concurrencyGate } from "./reliability.js";
+import { attachmentEvidence } from "./ocr.js";
+import { hasEntitlement } from "./billing.js";
 export const attempts = Router();
 attempts.use(auth);
 export function shuffle(items) {
@@ -32,9 +43,29 @@ export function publicAttempt(a) {
     status: a.status,
     startedAt: a.startedAt,
     deadline: a.deadline,
+    readUntil: a.readUntil,
     serverNow: new Date().toISOString(),
     revision: a.revision,
     answers: a.answers,
+    feedback:
+      a.snapshot.mode === "PRACTICE" && a.snapshot.feedbackMode === "IMMEDIATE"
+        ? Object.fromEntries(
+            a.questions
+              .filter(
+                (q) =>
+                  !isDescriptive(q.type) && hasAnswer(a.answers[q._id]?.value),
+              )
+              .map((q) => [
+                q._id,
+                {
+                  correct: q.correct,
+                  explanation: q.explanation,
+                  awardedMarks: scoreObjective(q, a.answers[q._id].value),
+                  maximumMarks: q.maximumMarks,
+                },
+              ]),
+          )
+        : undefined,
     questions: a.questions.map((q) => {
       const {
         correct,
@@ -55,10 +86,27 @@ export async function finalize(a, now = new Date()) {
   if (a.status !== "ACTIVE") return a;
   const expired = !!a.deadline && a.deadline <= now;
   const evaluations = {};
+  const excluded = new Set();
+  for (const section of a.snapshot.sections) {
+    const answered = a.questions.filter(
+      (q) => q.sectionId === section.id && answerPresent(a.answers[q._id]),
+    );
+    for (const q of answered.slice(section.maxAnswers ?? answered.length))
+      excluded.add(q._id);
+  }
   for (const q of a.questions) {
     const answer = a.answers[q._id]?.value;
+    if (excluded.has(q._id)) {
+      evaluations[q._id] = {
+        status: "NOT_COUNTED",
+        awardedMarks: 0,
+        maximumMarks: q.maximumMarks,
+        feedback: "Beyond the section answer limit",
+      };
+      continue;
+    }
     if (isDescriptive(q.type)) {
-      evaluations[q._id] = hasAnswer(answer)
+      evaluations[q._id] = answerPresent(a.answers[q._id])
         ? {
             status: "PENDING",
             awardedMarks: null,
@@ -84,6 +132,7 @@ export async function finalize(a, now = new Date()) {
         status: expired ? "EXPIRED" : "SUBMITTED",
         submittedAt: now,
         evaluations,
+        summary: summaryFor(a, evaluations),
         evaluationState: Object.values(evaluations).some(
           (e) => e.status === "PENDING",
         )
@@ -124,11 +173,7 @@ attempts.post("/tests/:id/start", async (req, res) => {
   );
   if (d.premium)
     assert(
-      await Payment.exists({
-        userId,
-        status: "PAID",
-        expiresAt: { $gt: new Date() },
-      }),
+      await hasEntitlement(req.user),
       402,
       "A valid study pass is required",
     );
@@ -186,6 +231,9 @@ attempts.post("/tests/:id/start", async (req, res) => {
       deadline: d.durationMinutes
         ? new Date(+now + d.durationMinutes * 60000)
         : null,
+      readUntil: d.readingMinutes
+        ? new Date(+now + d.readingMinutes * 60000)
+        : null,
     });
     res.status(201).json(publicAttempt(a));
   } catch (e) {
@@ -198,13 +246,16 @@ attempts.post("/tests/:id/start", async (req, res) => {
 });
 attempts.get("/attempts", async (req, res) => {
   const rows = await Attempt.find({ userId: String(req.user._id) })
+    .select(
+      "testId snapshot.title snapshot.academic.subjectId status startedAt deadline evaluationState revision",
+    )
     .sort({ createdAt: -1 })
     .limit(100);
   const output = [];
   for (const a of rows) {
     const r =
       a.status === "ACTIVE" && a.deadline && a.deadline <= new Date()
-        ? await finalize(a)
+        ? await finalize(await Attempt.findById(a._id))
         : a;
     output.push({
       id: String(r._id),
@@ -218,26 +269,64 @@ attempts.get("/attempts", async (req, res) => {
   res.json(output);
 });
 attempts.get("/analytics", async (req, res) => {
-  const rows = await Attempt.find({
-    userId: String(req.user._id),
-    status: { $ne: "ACTIVE" },
-  })
-    .sort({ submittedAt: -1 })
-    .limit(500);
-  const results = rows.map(resultView);
-  const final = results.filter((r) => !r.provisional);
+  const filter = { userId: String(req.user._id), status: { $ne: "ACTIVE" } };
+  const [stats, rows] = await Promise.all([
+    Attempt.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: null,
+          completed: { $sum: 1 },
+          finalized: {
+            $sum: { $cond: [{ $eq: ["$summary.provisional", false] }, 1, 0] },
+          },
+          scoreSum: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $eq: ["$summary.provisional", false] },
+                    { $gt: ["$summary.maximumMarks", 0] },
+                  ],
+                },
+                {
+                  $multiply: [
+                    100,
+                    {
+                      $divide: [
+                        "$summary.awardedMarks",
+                        "$summary.maximumMarks",
+                      ],
+                    },
+                  ],
+                },
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ]).option({ maxTimeMS: 5000 }),
+    Attempt.find(filter)
+      .select("summary snapshot.title submittedAt")
+      .sort({ submittedAt: -1 })
+      .limit(50)
+      .lean(),
+  ]);
+  const result = stats[0] || { completed: 0, finalized: 0, scoreSum: 0 };
   res.json({
-    completed: rows.length,
-    finalized: final.length,
-    average: final.length
-      ? Math.round(
-          final.reduce(
-            (s, r) => s + (r.awardedMarks / r.maximumMarks) * 100,
-            0,
-          ) / final.length,
-        )
+    completed: result.completed,
+    finalized: result.finalized,
+    average: result.finalized
+      ? Math.round(result.scoreSum / result.finalized)
       : null,
-    results: results.slice(0, 50),
+    results: rows.map((a) => ({
+      id: String(a._id),
+      title: a.snapshot.title,
+      awardedMarks: a.summary?.awardedMarks ?? 0,
+      maximumMarks: a.summary?.maximumMarks ?? 1,
+      provisional: a.summary?.provisional ?? true,
+    })),
   });
 });
 attempts.get("/attempts/:id/image", async (req, res) => {
@@ -272,16 +361,57 @@ attempts.get("/attempts/:id/image", async (req, res) => {
     ),
   });
 });
-attempts.get("/attempts/:id", async (req, res) =>
+attempts.get("/attempts/:id", concurrencyGate(4), async (req, res) =>
   res.json(publicAttempt(await owned(req.params.id, String(req.user._id)))),
 );
 attempts.put("/attempts/:id/answer", async (req, res) => {
   const d = answerSchema.parse(req.body);
-  const a = await owned(req.params.id, String(req.user._id));
+  let a = await Attempt.findOne({
+    _id: id.parse(req.params.id),
+    userId: String(req.user._id),
+  })
+    .select({
+      questions: { $elemMatch: { _id: d.questionId } },
+      status: 1,
+      deadline: 1,
+      readUntil: 1,
+      revision: 1,
+      snapshot: 1,
+      answeredIds: 1,
+      answerBytes: 1,
+      [`answers.${d.questionId}`]: 1,
+    })
+    .lean();
+  assert(a, 404, "Attempt not found");
+  if (a.status === "ACTIVE" && a.deadline && a.deadline <= new Date()) {
+    await owned(req.params.id, String(req.user._id));
+    throw new HttpError(409, "Attempt is finalized");
+  }
   assert(a.status === "ACTIVE", 409, "Attempt is finalized");
+  assert(
+    !answerPresent(d) || !a.readUntil || a.readUntil <= new Date(),
+    400,
+    "Reading time is still in progress",
+  );
+  if (a.answerBytes === undefined) {
+    const full = await Attempt.findById(a._id).lean();
+    const answeredIds = Object.entries(full.answers)
+        .filter(([, v]) => answerPresent(v))
+        .map(([k]) => k),
+      answerBytes = Object.values(full.answers).reduce(
+        (n, v) => n + Buffer.byteLength(JSON.stringify(v), "utf8"),
+        0,
+      );
+    await Attempt.updateOne(
+      { _id: a._id, revision: a.revision },
+      { $set: { answeredIds, answerBytes } },
+    );
+    a.answeredIds = answeredIds;
+    a.answerBytes = answerBytes;
+  }
   const q = a.questions.find((q) => q._id === d.questionId);
   assert(q, 400, "Question not in this attempt");
-  const current = a.answers[d.questionId];
+  const current = a.answers?.[d.questionId];
   assert(
     d.version === (current?.version ?? 0),
     409,
@@ -307,13 +437,36 @@ attempts.put("/attempts/:id/answer", async (req, res) => {
       400,
       "Word limit exceeded",
     );
+  if (d.attachmentIds.length) {
+    assert(
+      isDescriptive(q.type),
+      400,
+      "Answer sheets are only allowed for descriptive answers",
+    );
+    assert(
+      new Set(d.attachmentIds).size === d.attachmentIds.length,
+      400,
+      "Duplicate answer-sheet page",
+    );
+    assert(
+      (await Attachment.countDocuments({
+        _id: { $in: d.attachmentIds },
+        attemptId: String(a._id),
+        questionId: q._id,
+        ownerId: String(req.user._id),
+      })) === d.attachmentIds.length,
+      400,
+      "Invalid answer-sheet page",
+    );
+  }
   const section = a.snapshot.sections.find((s) => s.id === q.sectionId);
-  if (hasAnswer(d.value) && section.maxAnswers) {
-    const other = a.questions.filter(
-      (x) =>
-        x.sectionId === q.sectionId &&
-        x._id !== q._id &&
-        hasAnswer(a.answers[x._id]?.value),
+  if (
+    answerPresent(d) &&
+    section.maxAnswers &&
+    section.choicePolicy !== "FIRST_IN_PAPER"
+  ) {
+    const other = (a.answeredIds || []).filter(
+      (qid) => qid !== q._id && section.questionIds.includes(qid),
     ).length;
     assert(
       other < section.maxAnswers,
@@ -322,11 +475,12 @@ attempts.put("/attempts/:id/answer", async (req, res) => {
     );
   }
   const next = { ...d, version: d.version + 1, updatedAt: new Date() };
+  const answerBytes =
+    a.answerBytes +
+    Buffer.byteLength(JSON.stringify(next), "utf8") -
+    (current ? Buffer.byteLength(JSON.stringify(current), "utf8") : 0);
   assert(
-    Buffer.byteLength(
-      JSON.stringify({ ...a.answers, [d.questionId]: next }),
-      "utf8",
-    ) <= 6_000_000,
+    answerBytes <= 6_000_000,
     400,
     "Total answer size exceeds the attempt limit",
   );
@@ -338,18 +492,114 @@ attempts.put("/attempts/:id/answer", async (req, res) => {
       revision: a.revision,
       $or: [{ deadline: null }, { deadline: { $gt: now } }],
     },
-    { $set: { [`answers.${d.questionId}`]: next }, $inc: { revision: 1 } },
-    { returnDocument: "after" },
+    {
+      $set: {
+        [`answers.${d.questionId}`]: next,
+        answerBytes,
+        answeredIds: answerPresent(d)
+          ? [...new Set([...(a.answeredIds || []), q._id])]
+          : (a.answeredIds || []).filter((x) => x !== q._id),
+      },
+      $inc: { revision: 1 },
+    },
+    { returnDocument: "after", projection: { revision: 1 } },
   );
   assert(updated, 409, "Attempt changed or timed out; reload");
-  res.json({ answer: next, revision: updated.revision, serverNow: new Date() });
+  res.json({
+    answer: next,
+    revision: updated.revision,
+    serverNow: new Date(),
+    feedback:
+      a.snapshot.mode === "PRACTICE" &&
+      a.snapshot.feedbackMode === "IMMEDIATE" &&
+      hasAnswer(d.value) &&
+      !isDescriptive(q.type)
+        ? {
+            correct: q.correct,
+            explanation: q.explanation,
+            awardedMarks: scoreObjective(q, d.value),
+            maximumMarks: q.maximumMarks,
+          }
+        : undefined,
+  });
 });
 attempts.post("/attempts/:id/submit", async (req, res) => {
   const a = await owned(req.params.id, String(req.user._id));
   res.json(publicAttempt(await finalize(a)));
 });
+attempts.post("/attempts/:id/retry", async (req, res) => {
+  const d = z
+    .object({
+      filter: z.enum(["INCORRECT", "UNANSWERED"]),
+      feedbackMode: z
+        .enum(["IMMEDIATE", "AFTER_SUBMISSION"])
+        .default("IMMEDIATE"),
+    })
+    .parse(req.body);
+  const old = await owned(req.params.id, String(req.user._id));
+  assert(old.status !== "ACTIVE", 409, "Submit the original attempt first");
+  const questions = old.questions.filter((q) =>
+    d.filter === "UNANSWERED"
+      ? !answerPresent(old.answers[q._id])
+      : answerPresent(old.answers[q._id]) &&
+        old.evaluations[q._id]?.status === "EVALUATED" &&
+        old.evaluations[q._id].awardedMarks < q.maximumMarks,
+  );
+  assert(questions.length, 400, "No questions match this retry selection");
+  assert(
+    !(await Attempt.exists({
+      userId: String(req.user._id),
+      testId: old.testId,
+      status: "ACTIVE",
+    })),
+    409,
+    "Resume or submit your active test first",
+  );
+  const sections = old.snapshot.sections
+    .map((s) => ({
+      ...s,
+      questionIds: questions
+        .filter((q) => q.sectionId === s.id)
+        .map((q) => q._id),
+      drawCount: undefined,
+      maxAnswers: undefined,
+      choicePolicy: "LIMIT_ANSWERS",
+    }))
+    .filter((s) => s.questionIds.length);
+  const a = await Attempt.create({
+    userId: String(req.user._id),
+    testId: old.testId,
+    testVersion: old.testVersion,
+    retryOf: String(old._id),
+    snapshot: {
+      ...old.snapshot,
+      title: `${d.filter === "INCORRECT" ? "Retry incorrect" : "Retry unanswered"} · ${old.snapshot.title}`,
+      mode: "PRACTICE",
+      feedbackMode: d.feedbackMode,
+      durationMinutes: null,
+      premium: false,
+      sections,
+    },
+    questions,
+    startedAt: new Date(),
+    deadline: null,
+  });
+  res.status(201).json(publicAttempt(a));
+});
 export function resultView(a) {
-  const values = Object.values(a.evaluations);
+  return {
+    id: String(a._id),
+    title: a.snapshot.title,
+    status: a.status,
+    ...summaryFor(a),
+    questions: a.questions,
+    answers: a.answers,
+    evaluations: a.evaluations,
+    submittedAt: a.submittedAt,
+  };
+}
+export function summaryFor(a, evaluations = a.evaluations) {
+  const values = Object.values(evaluations || {});
   const pending = values.some(
     (e) => e.status === "PENDING" || e.status === "REVIEW",
   );
@@ -364,21 +614,15 @@ export function resultView(a) {
     );
   }, 0);
   return {
-    id: String(a._id),
-    title: a.snapshot.title,
-    status: a.status,
     provisional: pending,
     awardedMarks: values
       .filter((e) => e.status === "EVALUATED")
       .reduce((s, e) => s + e.awardedMarks, 0),
     maximumMarks: max,
-    questions: a.questions,
-    answers: a.answers,
-    evaluations: a.evaluations,
-    submittedAt: a.submittedAt,
+    answeredCount: Object.values(a.answers || {}).filter(answerPresent).length,
   };
 }
-attempts.get("/attempts/:id/result", async (req, res) => {
+attempts.get("/attempts/:id/result", concurrencyGate(4), async (req, res) => {
   const a = await owned(req.params.id, String(req.user._id));
   assert(a.status !== "ACTIVE", 409, "Submit your test first");
   res.json(resultView(a));
@@ -434,7 +678,7 @@ attempts.post(
     });
     const history = {
       actor: String(req.user._id),
-      reason: d.reason,
+      reason: d.reason.slice(0, 500),
       previousMarks: a.evaluations[d.questionId]?.awardedMarks,
       at: new Date(),
     };
@@ -454,7 +698,14 @@ attempts.post(
         : "COMPLETE";
     const updated = await Attempt.findOneAndUpdate(
       { _id: a._id, revision: d.revision },
-      { $set: { evaluations, evaluationState: state }, $inc: { revision: 1 } },
+      {
+        $set: {
+          evaluations,
+          evaluationState: state,
+          summary: summaryFor(a, evaluations),
+        },
+        $inc: { revision: 1 },
+      },
       { returnDocument: "after" },
     );
     assert(updated, 409, "Review changed; reload");
@@ -465,6 +716,7 @@ attempts.post(
       details: {
         questionId: q._id,
         ...history,
+        reason: d.reason,
         previousEvaluation: {
           ...a.evaluations[d.questionId],
           history: undefined,
@@ -488,32 +740,86 @@ export async function tick() {
       if (!(e instanceof HttpError && e.status === 409)) throw e;
     }
   }
+  const leaseToken = randomUUID();
   const a = await Attempt.findOneAndUpdate(
     {
       status: { $ne: "ACTIVE" },
       evaluationState: "PENDING",
       $or: [{ leaseUntil: null }, { leaseUntil: { $lt: new Date() } }],
     },
-    { $set: { leaseUntil: new Date(Date.now() + 150000) } },
+    { $set: { leaseUntil: new Date(Date.now() + 60000), leaseToken } },
     { returnDocument: "after" },
   );
   if (!a) return;
-  const pending = a.questions.find(
-    (q) => a.evaluations[q._id]?.status === "PENDING",
+  const heartbeat = setInterval(
+    () =>
+      Attempt.updateOne(
+        { _id: a._id, leaseToken },
+        { $set: { leaseUntil: new Date(Date.now() + 60000) } },
+      ).catch(() => {}),
+    20000,
   );
-  if (!pending) return;
-  const e = await evaluate(pending, a.answers[pending._id]?.value);
-  const evaluations = { ...a.evaluations, [pending._id]: e };
-  const state = Object.values(evaluations).some((e) => e.status === "PENDING")
-    ? "PENDING"
-    : Object.values(evaluations).some((e) => e.status === "REVIEW")
-      ? "REVIEW"
-      : "COMPLETE";
-  await Attempt.updateOne(
-    { _id: a._id, revision: a.revision },
-    {
-      $set: { evaluations, evaluationState: state, leaseUntil: null },
-      $inc: { revision: 1 },
-    },
-  );
+  heartbeat.unref();
+  try {
+    const pending = a.questions.find(
+      (q) => a.evaluations[q._id]?.status === "PENDING",
+    );
+    if (!pending) {
+      await Attempt.updateOne(
+        { _id: a._id, leaseToken },
+        {
+          $set: {
+            evaluationState: Object.values(a.evaluations).some(
+              (e) => e.status === "REVIEW",
+            )
+              ? "REVIEW"
+              : "COMPLETE",
+          },
+        },
+      );
+      return;
+    }
+    let e;
+    try {
+      const pageIds = a.answers[pending._id]?.attachmentIds || [];
+      const evidence = pageIds.length
+        ? await attachmentEvidence(pageIds, a)
+        : undefined;
+      e = await evaluate(pending, a.answers[pending._id]?.value, evidence);
+    } catch (error) {
+      e = {
+        status: "REVIEW",
+        awardedMarks: null,
+        maximumMarks: pending.maximumMarks,
+        criteria: [],
+        requiresManualReview: true,
+        reviewReason: error.message,
+        confidence: 0,
+      };
+    }
+    const evaluations = { ...a.evaluations, [pending._id]: e };
+    const state = Object.values(evaluations).some((e) => e.status === "PENDING")
+      ? "PENDING"
+      : Object.values(evaluations).some((e) => e.status === "REVIEW")
+        ? "REVIEW"
+        : "COMPLETE";
+    await Attempt.updateOne(
+      { _id: a._id, revision: a.revision, leaseToken },
+      {
+        $set: {
+          evaluations,
+          evaluationState: state,
+          leaseUntil: null,
+          summary: summaryFor(a, evaluations),
+        },
+        $inc: { revision: 1 },
+      },
+    );
+  } finally {
+    clearInterval(heartbeat);
+    await Attempt.updateOne(
+      { _id: a._id, leaseToken },
+      { $set: { leaseUntil: null }, $unset: { leaseToken: "" } },
+    );
+  }
 }

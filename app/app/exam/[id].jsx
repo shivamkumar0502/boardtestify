@@ -1,3 +1,4 @@
+import { tr, useLanguage } from "@boardtestify/i18n";
 import { useEffect, useRef, useState } from "react";
 import {
   Text,
@@ -14,9 +15,13 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { answerStatus, hasAnswer } from "@boardtestify/domain";
-import { api } from "../../src/api";
+import { api, uploadFile } from "../../src/api";
+import * as ImagePicker from "expo-image-picker";
+import { NativeAttachment } from "../../src/extras";
+import { isDescriptive } from "@boardtestify/domain";
 import { s, Button, ErrorText } from "../../src/ui";
 export default function Exam() {
+  useLanguage();
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const [a, setA] = useState(null),
@@ -27,11 +32,16 @@ export default function Exam() {
     [showPalette, setPalette] = useState(false),
     [conflict, setConflict] = useState(false),
     [pending, setPending] = useState(0);
+  const [uploading, setUploading] = useState(false),
+    [readingLeft, setReadingLeft] = useState(0);
   const data = useRef(null),
     queue = useRef({}),
     busy = useRef(false),
     conflicted = useRef(false),
-    clock = useRef({ server: 0, mono: 0 }),
+    clock = useRef({
+      server: 0,
+      mono: 0,
+    }),
     seq = useRef(0);
   const key = `bt-mobile-queue-${id}`;
   async function persist() {
@@ -55,6 +65,11 @@ export default function Exam() {
       for (const [qid, snapshot] of Object.entries(queue.current)) {
         const result = await api(`/attempts/${id}/answer`, snapshot, "PUT");
         data.current.answers[qid] = result.answer;
+        if (result.feedback)
+          data.current.feedback = {
+            ...(data.current.feedback || {}),
+            [qid]: result.feedback,
+          };
         clock.current = {
           server: Date.parse(result.serverNow),
           mono: performance.now(),
@@ -64,7 +79,9 @@ export default function Exam() {
           delete queue.current[qid];
         else if (latest) latest.version = result.answer.version;
         await persist();
-        setA({ ...data.current });
+        setA({
+          ...data.current,
+        });
       }
       setStatus("All answers saved");
       return !Object.keys(queue.current).length;
@@ -112,6 +129,14 @@ export default function Exam() {
         load().catch(() => {});
     }, 30000);
     const timer = setInterval(() => {
+      if (data.current?.readUntil)
+        setReadingLeft(
+          Math.max(
+            0,
+            Date.parse(data.current.readUntil) -
+              (clock.current.server + performance.now() - clock.current.mono),
+          ),
+        );
       if (data.current?.deadline)
         setRemaining(
           Math.max(
@@ -139,7 +164,7 @@ export default function Exam() {
       .then(() => router.replace(`/result/${id}`))
       .catch((e) => setError(e.message));
   }, [remaining]);
-  function change(value, review) {
+  function change(value, review, attachmentIds) {
     if (conflicted.current || remaining === 0) return;
     const q = data.current.questions[idx];
     const current = queue.current[q._id] || data.current.answers[q._id];
@@ -150,9 +175,12 @@ export default function Exam() {
       review: review ?? current?.review ?? false,
       visited: true,
       generation: ++seq.current,
+      attachmentIds: attachmentIds ?? current?.attachmentIds ?? [],
     };
     void persist();
-    setA({ ...data.current });
+    setA({
+      ...data.current,
+    });
     setStatus("Saving…");
   }
   useEffect(() => {
@@ -161,12 +189,69 @@ export default function Exam() {
     if (!queue.current[q._id] && !a.answers[q._id]?.visited)
       change(q.type.endsWith("CHOICE") ? [] : "");
   }, [idx, a?.id]);
+  async function pickPage(camera = false) {
+    if (uploading) return;
+    const question = data.current.questions[idx];
+    setUploading(true);
+    try {
+      let picked;
+      if (camera) {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted)
+          throw Error("Camera permission is required to photograph a page");
+        picked = await ImagePicker.launchCameraAsync({
+          mediaTypes: ["images"],
+          quality: 0.8,
+        });
+      } else
+        picked = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["images"],
+          quality: 0.8,
+        });
+      if (picked.canceled) return;
+      const asset = picked.assets[0];
+      const uploaded = await uploadFile(
+        `/attempts/${id}/sheets`,
+        {
+          uri: asset.uri,
+          name: asset.fileName || "answer.jpg",
+          type: asset.mimeType || "image/jpeg",
+        },
+        {
+          questionId: question._id,
+        },
+      );
+      const current =
+        queue.current[question._id] || data.current.answers[question._id];
+      queue.current[question._id] = {
+        questionId: question._id,
+        version: current?.version ?? 0,
+        value: current?.value || "",
+        review: current?.review ?? false,
+        visited: true,
+        attachmentIds: [...(current?.attachmentIds || []), uploaded.id],
+        generation: ++seq.current,
+      };
+      await persist();
+      setA({
+        ...data.current,
+      });
+      setError("");
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setUploading(false);
+    }
+  }
   function submit() {
     Alert.alert(
       "Submit your test?",
       "Saved answers will be final. You cannot change them after submission.",
       [
-        { text: "Keep reviewing", style: "cancel" },
+        {
+          text: "Keep reviewing",
+          style: "cancel",
+        },
         {
           text: "Submit",
           onPress: async () => {
@@ -188,7 +273,7 @@ export default function Exam() {
     return (
       <View style={[s.screen, s.content]}>
         <ErrorText message={error} />
-        <Text style={s.text}>{status}</Text>
+        <Text style={s.text}>{tr(status)}</Text>
       </View>
     );
   const q = a.questions[idx],
@@ -211,24 +296,33 @@ export default function Exam() {
         contentContainerStyle={s.content}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={s.h2}>{a.snapshot.title}</Text>
+        <Text style={s.h2}>{tr(a.snapshot.title)}</Text>
         <View
-          style={[s.row, { justifyContent: "space-between", marginBottom: 18 }]}
+          style={[
+            s.row,
+            {
+              justifyContent: "space-between",
+              marginBottom: 18,
+            },
+          ]}
         >
           <Text style={s.timer}>
             {seconds === null
-              ? "Untimed"
-              : `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`}
+              ? tr("Untimed")
+              : tr("{0}:{1}", [
+                  Math.floor(seconds / 60),
+                  String(seconds % 60).padStart(2, "0"),
+                ])}
           </Text>
           <TouchableOpacity
             accessibilityRole="button"
             onPress={() => setPalette(!showPalette)}
           >
-            <Text style={s.accent}>Question palette ▦</Text>
+            <Text style={s.accent}>{tr("Question palette \u25A6")}</Text>
           </TouchableOpacity>
         </View>
         <Text style={s.small}>
-          {pending ? `${pending} pending answer update(s)` : status}
+          {pending ? tr("{0} pending answer update(s)", [pending]) : tr(status)}
         </Text>
         <ErrorText message={error} />
         {conflict && (
@@ -239,7 +333,10 @@ export default function Exam() {
                 "Discard local changes?",
                 "The saved server answers will be loaded.",
                 [
-                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Cancel",
+                    style: "cancel",
+                  },
                   {
                     text: "Discard",
                     style: "destructive",
@@ -256,117 +353,256 @@ export default function Exam() {
               )
             }
           >
-            Discard local changes & reload
+            {tr("Discard local changes & reload")}
           </Button>
         )}
         {showPalette && (
           <View style={[s.card, s.row]}>
-            {a.questions.map((question, i) => (
-              <TouchableOpacity
-                key={question._id}
-                accessibilityLabel={`Question ${i + 1} ${answerStatus(queue.current[question._id] || a.answers[question._id])}`}
-                style={[
-                  s.palette,
-                  {
-                    backgroundColor:
-                      paletteColors[
-                        answerStatus(
-                          queue.current[question._id] ||
-                            a.answers[question._id],
-                        )
-                      ],
-                    borderColor: i === idx ? "white" : "#45454f",
-                  },
-                ]}
-                onPress={() => {
-                  setIdx(i);
-                  setPalette(false);
-                }}
-              >
-                <Text style={s.text}>
-                  {i + 1}
-                  {answerStatus(
-                    queue.current[question._id] || a.answers[question._id],
-                  ) === "ANSWERED_AND_MARKED_FOR_REVIEW"
-                    ? "✓"
-                    : ""}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-        <Text style={[s.eyebrow, { marginTop: 20 }]}>
-          QUESTION {idx + 1} / {a.questions.length} · +{q.maximumMarks} / −
-          {q.negativeMarks}
-        </Text>
-        <Text style={s.small}>
-          {section.title} · {section.instructions}
-          {section.maxAnswers ? ` · Attempt up to ${section.maxAnswers}` : ""}
-        </Text>
-        <Text style={[s.h2, { lineHeight: 32, marginVertical: 20 }]}>
-          {q.text}
-        </Text>
-        {q.translation && (
-          <Text style={[s.muted, { marginBottom: 20 }]}>{q.translation}</Text>
-        )}
-        {q.imageKey && <QuestionImage attemptId={id} imageKey={q.imageKey} />}
-        <View pointerEvents={conflict || remaining === 0 ? "none" : "auto"}>
-          {q.type.endsWith("CHOICE") ? (
-            q.options.map((o) => {
-              const values = Array.isArray(answer?.value) ? answer.value : [];
-              return (
+            {tr(
+              a.questions.map((question, i) => (
                 <TouchableOpacity
-                  accessibilityRole={
-                    q.type === "SINGLE_CHOICE" ? "radio" : "checkbox"
-                  }
-                  accessibilityState={{ checked: values.includes(o.id) }}
-                  style={[s.option, values.includes(o.id) && s.selected]}
-                  key={o.id}
-                  onPress={() =>
-                    change(
-                      q.type === "SINGLE_CHOICE"
-                        ? [o.id]
-                        : values.includes(o.id)
-                          ? values.filter((v) => v !== o.id)
-                          : [...values, o.id],
-                    )
-                  }
+                  key={question._id}
+                  accessibilityLabel={tr("Question {0} {1}", [
+                    i + 1,
+                    answerStatus(
+                      queue.current[question._id] || a.answers[question._id],
+                    ),
+                  ])}
+                  style={[
+                    s.palette,
+                    {
+                      backgroundColor:
+                        paletteColors[
+                          answerStatus(
+                            queue.current[question._id] ||
+                              a.answers[question._id],
+                          )
+                        ],
+                      borderColor: i === idx ? "white" : "#45454f",
+                    },
+                  ]}
+                  onPress={() => {
+                    setIdx(i);
+                    setPalette(false);
+                  }}
                 >
                   <Text style={s.text}>
-                    {values.includes(o.id) ? "●" : "○"} {o.text}
+                    {tr(i + 1)}
+                    {answerStatus(
+                      queue.current[question._id] || a.answers[question._id],
+                    ) === "ANSWERED_AND_MARKED_FOR_REVIEW"
+                      ? tr("✓")
+                      : tr("")}
                   </Text>
                 </TouchableOpacity>
-              );
-            })
+              )),
+            )}
+          </View>
+        )}
+        <Text
+          style={[
+            s.eyebrow,
+            {
+              marginTop: 20,
+            },
+          ]}
+        >
+          {tr("QUESTION ")}
+          {tr(idx + 1)}
+          {tr(" / ")}
+          {tr(a.questions.length)}
+          {tr(" \xB7 +")}
+          {tr(q.maximumMarks)}
+          {tr(" / \u2212")}
+          {tr(q.negativeMarks)}
+        </Text>
+        <Text style={s.small}>
+          {tr(section.title)}
+          {tr(" \xB7 ")}
+          {tr(section.instructions)}
+          {section.maxAnswers
+            ? tr(" \xB7 Attempt up to {0}", [section.maxAnswers])
+            : tr("")}
+        </Text>
+        <Text
+          style={[
+            s.h2,
+            {
+              lineHeight: 32,
+              marginVertical: 20,
+            },
+          ]}
+        >
+          {tr(q.text)}
+        </Text>
+        {q.translation && (
+          <Text
+            style={[
+              s.muted,
+              {
+                marginBottom: 20,
+              },
+            ]}
+          >
+            {tr(q.translation)}
+          </Text>
+        )}
+        {q.imageKey && <QuestionImage attemptId={id} imageKey={q.imageKey} />}
+        <View
+          pointerEvents={
+            conflict || remaining === 0 || readingLeft > 0 ? "none" : "auto"
+          }
+        >
+          {q.type.endsWith("CHOICE") ? (
+            tr(
+              q.options.map((o) => {
+                const values = Array.isArray(answer?.value) ? answer.value : [];
+                return (
+                  <TouchableOpacity
+                    accessibilityRole={
+                      q.type === "SINGLE_CHOICE" ? "radio" : "checkbox"
+                    }
+                    accessibilityState={{
+                      checked: values.includes(o.id),
+                    }}
+                    style={[s.option, values.includes(o.id) && s.selected]}
+                    key={o.id}
+                    onPress={() =>
+                      change(
+                        q.type === "SINGLE_CHOICE"
+                          ? [o.id]
+                          : values.includes(o.id)
+                            ? values.filter((v) => v !== o.id)
+                            : [...values, o.id],
+                      )
+                    }
+                  >
+                    <Text style={s.text}>
+                      {values.includes(o.id) ? tr("●") : tr("○")} {tr(o.text)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              }),
+            )
           ) : (
             <>
               <Text style={s.label}>
-                Your answer · Hindi or English
-                {q.wordLimit ? ` · maximum ${q.wordLimit} words` : ""}
+                {tr("Your answer \xB7 Hindi or English")}
+                {q.wordLimit
+                  ? tr(" \xB7 maximum {0} words", [q.wordLimit])
+                  : tr("")}
               </Text>
               <TextInput
-                accessibilityLabel="Your answer"
+                accessibilityLabel={tr("Your answer")}
                 multiline
                 style={[s.input, s.answer]}
                 value={typeof answer?.value === "string" ? answer.value : ""}
                 onChangeText={(value) => change(value)}
                 maxLength={20000}
-                placeholder="Start your answer…"
+                placeholder={tr("Start your answer…")}
                 placeholderTextColor="#72727f"
               />
             </>
           )}
         </View>
-        <View style={s.row}>
-          <View style={{ flex: 1 }}>
+        {readingLeft > 0 && (
+          <Text style={s.muted}>
+            {tr("Reading period \xB7 ")}
+            {tr(Math.ceil(readingLeft / 60000))}
+            {tr(" minute(s) remaining")}
+          </Text>
+        )}
+        {isDescriptive(q.type) && (
+          <View style={s.card}>
+            <Text style={s.h2}>{tr("Handwritten answer pages")}</Text>
+            <Text style={s.muted}>
+              {tr(
+                "Attach up to four photos, including any required diagram. Teacher review is required for image-based marks.",
+              )}
+            </Text>
             <Button
               secondary
-              onPress={() => change(q.type.endsWith("CHOICE") ? [] : "")}
+              disabled={
+                uploading ||
+                conflict ||
+                remaining === 0 ||
+                readingLeft > 0 ||
+                (answer?.attachmentIds?.length || 0) >= 4
+              }
+              onPress={() => pickPage(false)}
             >
-              Clear response
+              {uploading ? tr("Uploading…") : tr("Choose answer photo")}
+            </Button>
+            <Button
+              secondary
+              disabled={
+                uploading ||
+                conflict ||
+                remaining === 0 ||
+                readingLeft > 0 ||
+                (answer?.attachmentIds?.length || 0) >= 4
+              }
+              onPress={() => pickPage(true)}
+            >
+              {tr("Photograph answer page")}
+            </Button>
+            {tr(
+              (answer?.attachmentIds || []).map((assetId, i) => (
+                <NativeAttachment
+                  key={assetId}
+                  id={assetId}
+                  index={i}
+                  remove={(assetId) =>
+                    change(
+                      answer?.value || "",
+                      answer?.review,
+                      answer.attachmentIds.filter((v) => v !== assetId),
+                    )
+                  }
+                />
+              )),
+            )}
+          </View>
+        )}
+        {a.feedback?.[q._id] && (
+          <View style={s.card}>
+            <Text style={s.h2}>{tr("Practice feedback")}</Text>
+            <Text style={s.accent}>
+              {tr(a.feedback[q._id].awardedMarks)}
+              {tr(" / ")}
+              {tr(q.maximumMarks)}
+            </Text>
+            <Text style={s.text}>
+              {tr("Correct answer: ")}
+              {tr(
+                a.feedback[q._id].correct
+                  .map((v) => q.options.find((o) => o.id === v)?.text || v)
+                  .join(", "),
+              )}
+            </Text>
+            <Text style={s.muted}>{tr(a.feedback[q._id].explanation)}</Text>
+          </View>
+        )}
+        <View style={s.row}>
+          <View
+            style={{
+              flex: 1,
+            }}
+          >
+            <Button
+              secondary
+              onPress={() =>
+                change(q.type.endsWith("CHOICE") ? [] : "", false, [])
+              }
+            >
+              {tr("Clear response")}
             </Button>
           </View>
-          <View style={{ flex: 1 }}>
+          <View
+            style={{
+              flex: 1,
+            }}
+          >
             <Button
               secondary
               onPress={() =>
@@ -376,21 +612,29 @@ export default function Exam() {
                 )
               }
             >
-              {answer?.review ? "Unmark review" : "Mark for review"}
+              {answer?.review ? tr("Unmark review") : tr("Mark for review")}
             </Button>
           </View>
         </View>
         <View style={s.row}>
-          <View style={{ flex: 1 }}>
+          <View
+            style={{
+              flex: 1,
+            }}
+          >
             <Button
               secondary
               disabled={idx === 0}
               onPress={() => setIdx(idx - 1)}
             >
-              ← Previous
+              {tr("\u2190 Previous")}
             </Button>
           </View>
-          <View style={{ flex: 1 }}>
+          <View
+            style={{
+              flex: 1,
+            }}
+          >
             <Button
               onPress={async () => {
                 await flush();
@@ -398,22 +642,31 @@ export default function Exam() {
                 else submit();
               }}
             >
-              Save & next →
+              {tr("Save & next \u2192")}
             </Button>
           </View>
         </View>
-        <Button secondary onPress={submit}>
-          Submit examination
+        <Button secondary disabled={uploading} onPress={submit}>
+          {tr("Submit examination")}
         </Button>
-        <Text style={[s.small, { marginTop: 20 }]}>
-          Time continues when you leave. Keep this screen open until answers are
-          saved. Marked-for-review answers count toward your result.
+        <Text
+          style={[
+            s.small,
+            {
+              marginTop: 20,
+            },
+          ]}
+        >
+          {tr(
+            "Time continues when you leave. Keep this screen open until answers are saved. Marked-for-review answers count toward your result.",
+          )}
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 function QuestionImage({ attemptId, imageKey }) {
+  useLanguage();
   const [uri, setURI] = useState("");
   useEffect(() => {
     api(`/attempts/${attemptId}/image?key=${encodeURIComponent(imageKey)}`)
@@ -422,10 +675,16 @@ function QuestionImage({ attemptId, imageKey }) {
   }, [imageKey]);
   return uri ? (
     <Image
-      source={{ uri }}
-      style={{ width: "100%", height: 220, marginBottom: 20 }}
+      source={{
+        uri,
+      }}
+      style={{
+        width: "100%",
+        height: 220,
+        marginBottom: 20,
+      }}
       resizeMode="contain"
-      accessibilityLabel="Question diagram"
+      accessibilityLabel={tr("Question diagram")}
     />
   ) : null;
 }

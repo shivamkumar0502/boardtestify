@@ -1,47 +1,50 @@
-# Deployment
+# Deployment and scaling
 
-## Website + API on one origin
+## Build, indexes and startup
 
-Use a Node.js host with MongoDB Atlas (or a managed MongoDB instance). A single Node service serves both the built React app and `/api`, so refresh cookies work without cross-site-cookie assumptions.
+Use Node.js 22+ and a managed MongoDB database. The API serves `frontend/dist` and `/api` on the same origin, so web refresh cookies do not depend on cross-site cookie support.
 
-Build: `npm ci && npm run build`
+1. Build: `npm ci && npm run build`.
+2. Configure the host environment from `.env.example`, including `NODE_ENV=production`, the actual HTTPS `WEB_ORIGIN`, `MONGODB_URI`, and a new random `JWT_SECRET`.
+3. Run `npm run migrate`. It creates/ensures indexes and backfills compact attempt summaries/answer tracking with revision checks; it does not change saved answers. Take a database backup before applying migrations to an existing client installation. Production disables automatic background index creation.
+4. Start API: `npm start -w @boardtestify/api`.
+5. Bootstrap administrators and verify academic content before publishing tests.
 
-Start: `npm start -w @boardtestify/api`
+Leave `VITE_API_URL` unset when building the same-origin production site. The client defaults to `/api`. Development uses `http://localhost:4000/api` and `WEB_ORIGIN=http://localhost:5173`. Separate web/API hosting requires a deliberate same-site cookie setup.
 
-Set production environment variables in the host:
+## Separate workers and replicas
 
-- `NODE_ENV=production`
-- `PORT` (provided by the hosting service where applicable)
-- `MONGODB_URI` (least-privilege application database user, TLS enabled)
-- `JWT_SECRET` (48+ random characters)
-- `WEB_ORIGIN=https://your-website-domain`
+Set `RUN_WORKER=false` on API replicas. Start `npm run worker` as a separate process/service with the same MongoDB, S3, OCR and AI settings. `WORKER_CONCURRENCY=2` is the default; increase it only after measuring provider quotas, CPU and memory. Local development can leave `RUN_WORKER=true`.
 
-Leave `VITE_API_URL` unset for the production web build: the client uses `/api`. For a separate web/API setup, configure `VITE_API_URL` at build time and use the same site with an explicit cookie policy; do not assume unrelated host subdomains share cookies.
+Evaluation work remains in MongoDB attempt records. A claim includes a unique lease token, a 60-second expiry and a 20-second heartbeat. Updates require both the token and attempt revision, so crashed workers can be replaced and stale workers cannot overwrite newer human reviews. Provider failures, missing configuration and unreadable pages become manual-review states with null marks. API restarts do not erase jobs.
 
-Health endpoint: `/api/health`. The process waits for database connection and indexes before listening. The server finalizes expired attempts when they are accessed and in the queue loop. Process suspension may delay background evaluation; expired answers are still rejected on access.
+MongoDB-backed fixed-window rate limits work across replicas without requiring Redis. They add database writes; measure this workload and consider a shared Redis limiter when volume justifies it. Pools default to `DB_POOL_MAX=30`, with finite wait, selection and socket timeouts. Each replica/worker has its own pool: include all processes when planning the database connection budget.
 
-Bootstrap an administrator with the CLI, then unset its password environment variable. Run `npm run seed` only if illustrative content is desired. There are no hardcoded live credentials. Keep staging and production databases, storage prefixes, provider keys and webhook endpoints separate.
+`API_CONCURRENCY=150` bounds admitted API work. Heavy attempt/result reads and image/import/authentication processing have smaller gates. Normal JSON is capped at 384 KB; question import routes allow 3 MB behind a two-request gate. Uploads are limited to 5 MB, 12 million source pixels, two simultaneous image operations, and four attached pages per answer. Image bytes are decoded/re-encoded as JPEG, metadata is removed, and Sharp's cache/thread count is bounded. CSV/XLSX archives undergo metadata and streamed decompression checks before Excel parsing.
 
-## AI
+The server returns 429/503 with retry guidance instead of admitting unbounded work. Client answer queues retry transient save failures. A 409 is preserved as a conflict requiring explicit reconciliation; the client never blindly overwrites newer server data.
 
-Set `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL` to a provider supporting OpenAI-compatible `chat/completions` JSON-object responses. The key stays server-side. A provider without this response format needs an adapter. Without AI configuration, nonempty descriptive answers go to manual review. Never substitute keyword matching or zero marks for provider failures.
+## Health and monitoring
 
-## Email
+`/api/live` reports a running HTTP process. `/api/health` checks MongoDB readiness and returns 503 when disconnected. Use readiness for routing and liveness for process supervision. Administrative Operations shows pending attempts, manual reviews, expired attempts awaiting finalization, stored-page counts, API uptime and memory. Use host monitoring for aggregate CPU, memory, database/provider latency, errors and worker restarts.
 
-Set `SMTP_URL` and `MAIL_FROM` to activate password reset. Verify the sender at your provider and test delivery. Password reset is otherwise explicitly unavailable. Phone OTP is not provided.
+Set `TRUST_PROXY_HOPS` to your host's exact trusted proxy depth. Leaving it at zero is correct for direct local access; an incorrect value can group users under the wrong IP or trust forged forwarding headers. Graceful shutdown stops HTTP acceptance, drains work and has a finite timeout; unfinished evaluation leases are recovered later.
 
-## Payments
+Hashed static assets have long-lived cache headers; HTML and student/API responses do not. Scale actual hosting resources from measured workloads, not the local synthetic benchmark alone. A sleeping/free instance can delay evaluation, even though late answer changes remain blocked by server deadlines.
 
-Set `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, and optional `PASS_PRICE_PAISE`. Configure the provider webhook to `https://your-domain/api/billing/webhook`, including `payment.captured`. Verify the webhook in test mode and retry duplicate delivery before switching keys. Client checkout success never grants access alone. The server fetches the payment, verifies capture, order, amount and currency. A paid order is its own entitlement record; repeated verification does not extend access. This is a one-time 30-day pass, not recurring billing. Refunds and disputes require manual operational handling in this version.
+## Optional providers
 
-## Storage
+- **AI:** `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL`. The adapter expects OpenAI-compatible JSON-object chat responses. Set `AI_VISION_ENABLED=true` only for an image-capable model. Calls are timed/bounded and a short circuit breaker reduces repeated outage calls. Handwritten/diagram marks always require teacher confirmation.
+- **Handwriting:** `OCR_API_KEY` for Google Cloud Vision `DOCUMENT_TEXT_DETECTION`, with Hindi/English hints. Restrict the key to the Vision API/server usage. Uploaded evidence can be reviewed manually when OCR fails. Input currently supports page photos (JPEG/PNG/WebP), not PDF upload or automatic PDF rasterization.
+- **Storage:** private S3-compatible `S3_BUCKET`, region, credentials and optional endpoint. Server-side uploads require PutObject/GetObject/DeleteObject rights. URLs expire after 5 minutes and are accessible only to the answer owner or authorized evaluators. Use HTTPS for browser-accessible signed URLs. `ATTACHMENT_RETENTION_DAYS=90` schedules deletion of expired image objects and metadata; configure this to the client’s retention requirements. Saved attempt scores remain after evidence retention expires.
+- **Email:** `SMTP_URL` and verified `MAIL_FROM` activate reset emails.
+- **Phone:** Twilio Account SID, Auth Token and Verify Service SID activate phone linking and OTP sign-in. International numbers are required. Code checks have attempt limits, short expiry, rate limits and one-use consumption. The app does not store plaintext OTPs. Configure SMS costs, regional permissions and sender requirements with the provider before activation.
+- **Payments:** Razorpay key ID/secret and webhook secret. Create one-time plans in Administration. For recurring plans, create a matching provider plan first; server checkout verifies its price/currency/period. Configure signed events for `payment.captured`, relevant `subscription.*` events and `refund.processed`. Test capture, mandate authorization, renewals, cancellation, refund and duplicate/reordered delivery before live keys. Authorization alone does not grant study access. Partial refunds and disputes require operational review.
 
-Set `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and optional S3-compatible `S3_ENDPOINT`. Use a private bucket, a least-privilege service identity and a browser CORS policy allowing your web origin to POST uploads. Upload policies expire in 5 minutes and constrain size/type. Signed GET URLs are available only for an image in the requesting student's attempt. File validation currently checks declared MIME/size and image-key shape; add content inspection/re-encoding and an upload-finalization scanner before accepting images from untrusted authors at scale. Some S3-compatible vendors do not implement POST policies; use a compatible vendor or add its adapter.
+Provider secrets stay on the backend. Real SMS, emails, payments and AI costs were not triggered by local contract tests.
 
-## Operational limits
+## Android and client acceptance
 
-Rate limiting currently uses process memory. Run one API instance or replace it with a shared limiter before horizontal scaling. Configure a trusted reverse proxy explicitly for your host; do not blindly trust incoming forwarding headers. Queue jobs have MongoDB leases and compare-and-swap revisions. Monitor failed queue ticks, latency, provider costs, manual-review backlog and database health. Server errors include request IDs; avoid logging submitted answers or credentials. Configure retention, deletion requests and backups separately, and verify restoration. No production deployment was performed by committing this project.
+Set HTTPS `EXPO_PUBLIC_API_URL` in your Android build environment. From `app/`, run `eas build --platform android --profile production` with your own Expo/signing credentials. Test low-resolution devices, Hindi typing, photo permissions, large images, reconnects, background/resume, token expiry and exam deadlines. The mobile app exposes subscription status/cancellation; purchase checkout and administration currently use the website. Review store distribution/billing requirements before release.
 
-## Android
-
-Set the HTTPS `EXPO_PUBLIC_API_URL` in the EAS build environment. From `app`, use `eas build --platform android --profile production` after signing into your own Expo account and configuring Android signing. A successful JS bundle export is not a signed `.aab` or device certification. Test low-resolution devices, reconnects, background/resume, Hindi input, token expiry and timer behavior before Play Store release.
+Configure database/object-store backups, restore drills, retention/deletion processes, incident ownership, alerts and client access. No production hosting change or restore drill was executed as part of source implementation.

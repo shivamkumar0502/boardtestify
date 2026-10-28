@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { env } from "./config.js";
 import { connect, User, Academic, QuestionModel, TestModel } from "./models.js";
 import { hash } from "./lib.js";
+import { seedCatalog } from "./catalog.js";
 await connect(env.MONGODB_URI);
 try {
   if (process.argv[2] === "admin") {
@@ -32,6 +33,7 @@ try {
     );
     console.log("Administrator created/updated. No credentials were logged.");
   } else if (process.argv[2] === "seed") {
+    await seedCatalog();
     // Original examples, not official BSEB syllabus, papers, or exam configurations.
     const subject = await Academic.findOneAndUpdate(
       {

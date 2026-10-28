@@ -1,14 +1,23 @@
+import { tr, useLanguage } from "@boardtestify/i18n";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 export const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#09090b" },
-  content: { padding: 20, paddingBottom: 55 },
+  screen: {
+    flex: 1,
+    backgroundColor: "#09090b",
+  },
+  content: {
+    padding: 20,
+    paddingBottom: 55,
+  },
   brand: {
     color: "#f5f5f5",
     fontSize: 24,
     fontWeight: "800",
     marginBottom: 30,
   },
-  accent: { color: "#ff7a35" },
+  accent: {
+    color: "#ff7a35",
+  },
   eyebrow: {
     color: "#a1a1aa",
     fontSize: 10,
@@ -23,9 +32,22 @@ export const s = StyleSheet.create({
     marginBottom: 12,
     letterSpacing: -1,
   },
-  h2: { color: "#f4f4f5", fontSize: 21, fontWeight: "600", marginBottom: 12 },
-  text: { color: "#c7c7cf", fontSize: 15, lineHeight: 25 },
-  muted: { color: "#94949f", fontSize: 13, lineHeight: 22 },
+  h2: {
+    color: "#f4f4f5",
+    fontSize: 21,
+    fontWeight: "600",
+    marginBottom: 12,
+  },
+  text: {
+    color: "#c7c7cf",
+    fontSize: 15,
+    lineHeight: 25,
+  },
+  muted: {
+    color: "#94949f",
+    fontSize: 13,
+    lineHeight: 22,
+  },
   card: {
     backgroundColor: "#131315",
     padding: 20,
@@ -52,9 +74,19 @@ export const s = StyleSheet.create({
     marginTop: 12,
     minHeight: 49,
   },
-  buttonText: { color: "#160e08", fontSize: 14, fontWeight: "700" },
-  ghost: { backgroundColor: "#222227", borderWidth: 1, borderColor: "#3e3e47" },
-  ghostText: { color: "#e4e4ec" },
+  buttonText: {
+    color: "#160e08",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  ghost: {
+    backgroundColor: "#222227",
+    borderWidth: 1,
+    borderColor: "#3e3e47",
+  },
+  ghostText: {
+    color: "#e4e4ec",
+  },
   error: {
     color: "#ffc4b0",
     backgroundColor: "#38201a",
@@ -69,7 +101,12 @@ export const s = StyleSheet.create({
     gap: 10,
     flexWrap: "wrap",
   },
-  tabs: { flexDirection: "row", gap: 10, flexWrap: "wrap", marginVertical: 20 },
+  tabs: {
+    flexDirection: "row",
+    gap: 10,
+    flexWrap: "wrap",
+    marginVertical: 20,
+  },
   tab: {
     backgroundColor: "#202024",
     paddingVertical: 10,
@@ -81,7 +118,11 @@ export const s = StyleSheet.create({
     borderColor: "#ff7a35",
     borderWidth: 1,
   },
-  small: { color: "#8e8e9b", fontSize: 11, marginBottom: 8 },
+  small: {
+    color: "#8e8e9b",
+    fontSize: 11,
+    marginBottom: 8,
+  },
   option: {
     padding: 17,
     borderRadius: 8,
@@ -90,7 +131,10 @@ export const s = StyleSheet.create({
     backgroundColor: "#131317",
     marginBottom: 12,
   },
-  selected: { borderColor: "#ff7a35", backgroundColor: "#2d1f17" },
+  selected: {
+    borderColor: "#ff7a35",
+    backgroundColor: "#2d1f17",
+  },
   palette: {
     width: 43,
     height: 43,
@@ -106,8 +150,16 @@ export const s = StyleSheet.create({
     color: "#ffb17e",
     fontVariant: ["tabular-nums"],
   },
-  answer: { minHeight: 180, textAlignVertical: "top", lineHeight: 25 },
-  label: { color: "#c7c7cf", fontSize: 12, marginBottom: 8 },
+  answer: {
+    minHeight: 180,
+    textAlignVertical: "top",
+    lineHeight: 25,
+  },
+  label: {
+    color: "#c7c7cf",
+    fontSize: 12,
+    marginBottom: 8,
+  },
 });
 export function Button({
   children,
@@ -115,21 +167,31 @@ export function Button({
   secondary = false,
   disabled = false,
 }) {
+  useLanguage();
   return (
     <TouchableOpacity
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
-      style={[s.button, secondary && s.ghost, disabled && { opacity: 0.5 }]}
+      style={[
+        s.button,
+        secondary && s.ghost,
+        disabled && {
+          opacity: 0.5,
+        },
+      ]}
     >
-      <Text style={[s.buttonText, secondary && s.ghostText]}>{children}</Text>
+      <Text style={[s.buttonText, secondary && s.ghostText]}>
+        {tr(children)}
+      </Text>
     </TouchableOpacity>
   );
 }
 export function ErrorText({ message }) {
+  useLanguage();
   return message ? (
     <Text accessibilityRole="alert" style={s.error}>
-      {message}
+      {tr(message)}
     </Text>
   ) : null;
 }

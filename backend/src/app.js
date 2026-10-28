@@ -2,7 +2,6 @@ import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { rateLimit } from "express-rate-limit";
 import { ZodError } from "zod";
 import pino from "pino";
 import mongoose from "mongoose";
@@ -14,11 +13,17 @@ import { authRouter } from "./auth.js";
 import { content } from "./content.js";
 import { attempts } from "./attempts.js";
 import { integrations, webhook } from "./integrations.js";
+import { sharedLimit, concurrencyGate } from "./reliability.js";
+import { management } from "./management.js";
+import { attachments } from "./attachments.js";
+import { billing } from "./billing.js";
+import { otp } from "./otp.js";
 export const logger = pino({
   redact: ["password", "token", "authorization", "cookie", "studentAnswer"],
 });
 export const app = express();
 app.disable("x-powered-by");
+if (env.TRUST_PROXY_HOPS) app.set("trust proxy", env.TRUST_PROXY_HOPS);
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -37,35 +42,56 @@ app.use(
 app.use(cors({ origin: env.WEB_ORIGIN, credentials: true }));
 app.use((req, res, next) => {
   res.setHeader("X-Request-ID", randomUUID());
-  res.setHeader("Cache-Control", "no-store");
+  if (req.path.startsWith("/api/")) res.setHeader("Cache-Control", "no-store");
   next();
 });
 app.post(
   "/api/billing/webhook",
+  concurrencyGate(4),
   express.raw({ type: "application/json", limit: "100kb" }),
   webhook,
 );
-app.use(express.json({ limit: "3mb" }));
 app.use(cookieParser());
-app.use(
-  rateLimit({
-    windowMs: 60000,
-    limit: 240,
-    standardHeaders: "draft-8",
-    legacyHeaders: false,
-  }),
-);
+app.get("/api/live", (_req, res) => res.json({ ok: true }));
+app.use("/api", concurrencyGate(env.API_CONCURRENCY));
 app.get("/api/health", (_req, res) =>
   res
     .status(mongoose.connection.readyState === 1 ? 200 : 503)
     .json({ ok: mongoose.connection.readyState === 1 }),
 );
+app.use("/api", sharedLimit({ name: "api", limit: 12000, windowMs: 60000 }));
+app.use(
+  "/api/admin/import",
+  concurrencyGate(2),
+  express.json({ limit: "3mb" }),
+);
+app.use(express.json({ limit: "384kb" }));
 app.use("/api/auth", authRouter);
-app.use("/api", integrations, content, attempts);
+app.use("/api/auth", otp);
+app.use(
+  "/api",
+  integrations,
+  billing,
+  content,
+  management,
+  attachments,
+  attempts,
+);
 const webDist = fileURLToPath(new URL("../../frontend/dist/", import.meta.url));
-app.use(express.static(webDist));
+app.use(
+  "/assets",
+  express.static(webDist + "assets", { immutable: true, maxAge: "1y" }),
+);
+app.use(
+  express.static(webDist, {
+    setHeaders: (res, path) => {
+      if (path.endsWith(".html")) res.setHeader("Cache-Control", "no-store");
+    },
+  }),
+);
 app.get("/{*path}", (req, res, next) => {
   if (req.path.startsWith("/api/")) return next();
+  res.setHeader("Cache-Control", "no-store");
   res.sendFile(webDist + "index.html", (err) => {
     if (err) next();
   });
@@ -83,9 +109,24 @@ app.use((err, req, res, _next) => {
             ? 409
             : err.type === "entity.too.large"
               ? 413
-              : err instanceof SyntaxError
-                ? 400
-                : 500;
+              : [
+                    "MongoNotConnectedError",
+                    "MongoServerSelectionError",
+                    "MongoNetworkError",
+                    "MongoNetworkTimeoutError",
+                    "MongoWaitQueueTimeoutError",
+                  ].includes(err.name) ||
+                  err.code === 50 ||
+                  /buffering timed out/.test(err.message || "")
+                ? 503
+                : err.code === "LIMIT_FILE_SIZE"
+                  ? 413
+                  : err.name === "MulterError" ||
+                      String(err.code || "").startsWith("CSV_")
+                    ? 400
+                    : err instanceof SyntaxError
+                      ? 400
+                      : 500;
   const message =
     err instanceof ZodError
       ? "Validation failed"
@@ -97,12 +138,16 @@ app.use((err, req, res, _next) => {
             ? "Upload too large"
             : status === 400
               ? "Invalid JSON"
-              : "Something went wrong";
+              : status === 503
+                ? "Service temporarily unavailable. Please retry."
+                : "Something went wrong";
   if (status === 500)
     logger.error(
       { err, requestId: res.getHeader("X-Request-ID"), path: req.path },
       "Request failed",
     );
+  if (status === 503 && !res.hasHeader("Retry-After"))
+    res.setHeader("Retry-After", "3");
   res.status(status).json({
     message,
     details:

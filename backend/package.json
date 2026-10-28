@@ -6,7 +6,9 @@
     "dev": "node --watch --env-file-if-exists=../.env src/server.js",
     "start": "node --env-file-if-exists=../.env src/server.js",
     "seed": "node --env-file-if-exists=../.env src/manage.js seed",
-    "admin": "node --env-file-if-exists=../.env src/manage.js admin"
+    "admin": "node --env-file-if-exists=../.env src/manage.js admin",
+    "worker": "node --env-file-if-exists=../.env src/worker.js",
+    "migrate": "node --env-file-if-exists=../.env src/migrate.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.840.0",
@@ -24,9 +26,11 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^9.11.4",
+    "multer": "^2.5.0",
     "nodemailer": "^7.0.10",
     "pino": "^9.7.0",
+    "sharp": "^0.34.5",
+    "yauzl": "^3.4.0",
     "zod": "^3.25.0"
-  },
-  "devDependencies": {}
+  }
 }

@@ -13,9 +13,20 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useCallback } from "react";
 import { api, login, register, restore, logout, user } from "../src/api";
+import {
+  NativeLanguageSwitch,
+  NativeAnnouncements,
+  NativeResources,
+  NativePhone,
+  NativeBilling,
+  NativeAccountEditor,
+} from "../src/extras";
+import { getLanguage, tr, useLanguage } from "@boardtestify/i18n";
 import { s, Button, ErrorText } from "../src/ui";
 export default function Home() {
+  useLanguage();
   const router = useRouter();
+  const [showOtp, setShowOtp] = useState(false);
   const [ready, setReady] = useState(false),
     [signed, setSigned] = useState(false),
     [signup, setSignup] = useState(false),
@@ -54,7 +65,14 @@ export default function Home() {
     setError("");
     try {
       if (signup)
-        await register({ name, email, password, classLevel: level, stream });
+        await register({
+          name,
+          email,
+          password,
+          classLevel: level,
+          stream,
+          language: getLanguage(),
+        });
       else await login(email, password);
       setSigned(true);
       setPassword("");
@@ -78,57 +96,96 @@ export default function Home() {
   }
   if (!ready)
     return (
-      <SafeAreaView style={[s.screen, { justifyContent: "center" }]}>
+      <SafeAreaView
+        style={[
+          s.screen,
+          {
+            justifyContent: "center",
+          },
+        ]}
+      >
         <ActivityIndicator color="#ff7a35" />
       </SafeAreaView>
     );
   return (
     <SafeAreaView style={s.screen}>
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={{
+          flex: 1,
+        }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={s.content}
         >
+          <NativeLanguageSwitch />
           <Text style={s.brand}>
-            B<Text style={s.accent}>✓</Text> BoardTestify
-            <Text style={s.accent}>.</Text>
+            {tr("B")}
+            <Text style={s.accent}>{tr("\u2713")}</Text>
+            {tr(" BoardTestify")}
+            <Text style={s.accent}>{tr(".")}</Text>
           </Text>
           {!signed ? (
             <>
-              <Text style={s.eyebrow}>YOUR NEXT CHAPTER STARTS HERE</Text>
-              <Text style={s.h1}>
-                {signup ? "Make preparation yours." : "Welcome back."}
+              {!signup && (
+                <>
+                  <Button secondary onPress={() => setShowOtp(!showOtp)}>
+                    {tr("Phone OTP sign-in")}
+                  </Button>
+                  {showOtp && (
+                    <NativePhone
+                      onSuccess={() => {
+                        setSigned(true);
+                        setPassword("");
+                      }}
+                    />
+                  )}
+                </>
+              )}
+              <Text style={s.eyebrow}>
+                {tr("YOUR NEXT CHAPTER STARTS HERE")}
               </Text>
-              <Text style={[s.muted, { marginBottom: 30 }]}>
-                Bihar Board Class 10 & 12. Practice Smart. Prepare Better. Score
-                Higher.
+              <Text style={s.h1}>
+                {signup ? tr("Make preparation yours.") : tr("Welcome back.")}
+              </Text>
+              <Text
+                style={[
+                  s.muted,
+                  {
+                    marginBottom: 30,
+                  },
+                ]}
+              >
+                {tr(
+                  "Bihar Board Class 10 & 12. Practice Smart. Prepare Better. Score Higher.",
+                )}
               </Text>
               {signup && (
                 <>
-                  <Text style={s.label}>Full name</Text>
+                  <Text style={s.label}>{tr("Full name")}</Text>
                   <TextInput
-                    accessibilityLabel="Full name"
+                    accessibilityLabel={tr("Full name")}
                     style={s.input}
                     value={name}
                     onChangeText={setName}
                   />
                 </>
               )}
-              <Text style={s.label}>Email address</Text>
+              <Text style={s.label}>{tr("Email address")}</Text>
               <TextInput
-                accessibilityLabel="Email address"
+                accessibilityLabel={tr("Email address")}
                 style={s.input}
                 autoCapitalize="none"
                 keyboardType="email-address"
                 value={email}
                 onChangeText={setEmail}
               />
-              <Text style={s.label}>Password · at least 10 characters</Text>
+              <Text style={s.label}>
+                {tr("Password \xB7 at least 10 characters")}
+              </Text>
               <TextInput
-                accessibilityLabel="Password"
+                accessibilityLabel={tr("Password")}
                 style={s.input}
                 secureTextEntry
                 value={password}
@@ -136,32 +193,39 @@ export default function Home() {
               />
               {signup && (
                 <>
-                  <Text style={s.label}>Class</Text>
+                  <Text style={s.label}>{tr("Class")}</Text>
                   <View style={s.tabs}>
-                    {["10", "12"].map((v) => (
-                      <TouchableOpacity
-                        key={v}
-                        style={[s.tab, level === v && s.tabActive]}
-                        onPress={() => {
-                          setLevel(v);
-                          setStream(v === "10" ? "GENERAL" : "SCIENCE");
-                        }}
-                      >
-                        <Text style={s.text}>Class {v}</Text>
-                      </TouchableOpacity>
-                    ))}
+                    {tr(
+                      ["10", "12"].map((v) => (
+                        <TouchableOpacity
+                          key={v}
+                          style={[s.tab, level === v && s.tabActive]}
+                          onPress={() => {
+                            setLevel(v);
+                            setStream(v === "10" ? "GENERAL" : "SCIENCE");
+                          }}
+                        >
+                          <Text style={s.text}>
+                            {tr("Class ")}
+                            {tr(v)}
+                          </Text>
+                        </TouchableOpacity>
+                      )),
+                    )}
                   </View>
                   {level === "12" && (
                     <View style={s.tabs}>
-                      {["SCIENCE", "ARTS", "COMMERCE"].map((v) => (
-                        <TouchableOpacity
-                          style={[s.tab, stream === v && s.tabActive]}
-                          key={v}
-                          onPress={() => setStream(v)}
-                        >
-                          <Text style={s.text}>{v}</Text>
-                        </TouchableOpacity>
-                      ))}
+                      {tr(
+                        ["SCIENCE", "ARTS", "COMMERCE"].map((v) => (
+                          <TouchableOpacity
+                            style={[s.tab, stream === v && s.tabActive]}
+                            key={v}
+                            onPress={() => setStream(v)}
+                          >
+                            <Text style={s.text}>{tr(v)}</Text>
+                          </TouchableOpacity>
+                        )),
+                      )}
                     </View>
                   )}
                 </>
@@ -169,10 +233,10 @@ export default function Home() {
               <ErrorText message={error} />
               <Button disabled={busy} onPress={submit}>
                 {busy
-                  ? "Please wait…"
+                  ? tr("Please wait…")
                   : signup
-                    ? "Create account →"
-                    : "Sign in →"}
+                    ? tr("Create account →")
+                    : tr("Sign in →")}
               </Button>
               <Button
                 secondary
@@ -182,96 +246,146 @@ export default function Home() {
                 }}
               >
                 {signup
-                  ? "Already registered? Sign in"
-                  : "New here? Create an account"}
+                  ? tr("Already registered? Sign in")
+                  : tr("New here? Create an account")}
               </Button>
             </>
           ) : (
             <>
-              <Text style={s.eyebrow}>YOUR JOURNEY, YOUR PACE</Text>
+              <Text style={s.eyebrow}>{tr("YOUR JOURNEY, YOUR PACE")}</Text>
               <Text style={s.h1}>
-                Keep going, {user?.name?.split(" ")[0]}
-                <Text style={s.accent}>.</Text>
+                {tr("Keep going, ")}
+                {tr(user?.name?.split(" ")[0])}
+                <Text style={s.accent}>{tr(".")}</Text>
               </Text>
               <Text style={s.muted}>
-                Class {user?.classLevel} · {user?.stream} · Bihar Board
+                {tr("Class ")}
+                {tr(user?.classLevel)}
+                {tr(" \xB7 ")}
+                {tr(user?.stream)}
+                {tr(" \xB7 Bihar Board")}
               </Text>
               <View style={s.tabs}>
-                {["Tests", "Attempts", "Profile"].map((t) => (
-                  <TouchableOpacity
-                    style={[s.tab, tab === t && s.tabActive]}
-                    onPress={() => setTab(t)}
-                    key={t}
-                  >
-                    <Text style={s.text}>{t}</Text>
-                  </TouchableOpacity>
-                ))}
+                {tr(
+                  ["Tests", "Attempts", "Resources", "Profile"].map((t) => (
+                    <TouchableOpacity
+                      style={[s.tab, tab === t && s.tabActive]}
+                      onPress={() => setTab(t)}
+                      key={t}
+                    >
+                      <Text style={s.text}>{tr(t)}</Text>
+                    </TouchableOpacity>
+                  )),
+                )}
               </View>
               <ErrorText message={error} />
               {tab === "Tests" ? (
-                tests.length ? (
-                  tests.map((t) => (
-                    <View key={t.id} style={s.card}>
-                      <Text style={s.eyebrow}>
-                        {t.mode} · {t.premium ? "STUDY PASS" : "FREE"}
+                <>
+                  <NativeAnnouncements />
+                  {tests.length ? (
+                    tr(
+                      tests.map((t) => (
+                        <View key={t.id} style={s.card}>
+                          <Text style={s.eyebrow}>
+                            {tr(t.mode)}
+                            {tr(" \xB7 ")}
+                            {t.premium ? tr("STUDY PASS") : tr("FREE")}
+                          </Text>
+                          <Text style={s.h2}>{tr(t.title)}</Text>
+                          <Text style={s.muted}>{tr(t.description)}</Text>
+                          <Text
+                            style={[
+                              s.small,
+                              {
+                                marginTop: 15,
+                              },
+                            ]}
+                          >
+                            {t.durationMinutes
+                              ? tr("{0} minutes", [t.durationMinutes])
+                              : tr("Untimed")}
+                            {tr(" ")}
+                            {tr("\xB7 ")}
+                            {tr(t.sections.reduce((n, s) => n + s.count, 0))}
+                            {tr(" ")}
+                            {tr("questions")}
+                          </Text>
+                          <Button disabled={busy} onPress={() => start(t.id)}>
+                            {tr("Start test \u2197")}
+                          </Button>
+                        </View>
+                      )),
+                    )
+                  ) : (
+                    <View style={s.card}>
+                      <Text style={s.h2}>
+                        {tr("More practice is on the way.")}
                       </Text>
-                      <Text style={s.h2}>{t.title}</Text>
-                      <Text style={s.muted}>{t.description}</Text>
-                      <Text style={[s.small, { marginTop: 15 }]}>
-                        {t.durationMinutes
-                          ? `${t.durationMinutes} minutes`
-                          : "Untimed"}{" "}
-                        · {t.sections.reduce((n, s) => n + s.count, 0)}{" "}
-                        questions
+                      <Text style={s.muted}>
+                        {tr("No approved tests for this class/stream yet.")}
                       </Text>
-                      <Button disabled={busy} onPress={() => start(t.id)}>
-                        Start test ↗
-                      </Button>
                     </View>
-                  ))
-                ) : (
-                  <View style={s.card}>
-                    <Text style={s.h2}>More practice is on the way.</Text>
-                    <Text style={s.muted}>
-                      No approved tests for this class/stream yet.
-                    </Text>
-                  </View>
-                )
+                  )}
+                </>
               ) : tab === "Attempts" ? (
                 attempts.length ? (
-                  attempts.map((a) => (
-                    <View style={s.card} key={a.id}>
-                      <Text style={s.small}>
-                        {a.status} · {a.evaluationState || "IN PROGRESS"}
-                      </Text>
-                      <Text style={s.h2}>{a.title}</Text>
-                      <Button
-                        secondary
-                        onPress={() =>
-                          router.push(
-                            a.status === "ACTIVE"
-                              ? `/exam/${a.id}`
-                              : `/result/${a.id}`,
-                          )
-                        }
-                      >
-                        {a.status === "ACTIVE" ? "Resume test" : "View result"}
-                      </Button>
-                    </View>
-                  ))
+                  tr(
+                    attempts.map((a) => (
+                      <View style={s.card} key={a.id}>
+                        <Text style={s.small}>
+                          {tr(a.status)}
+                          {tr(" \xB7 ")}
+                          {a.evaluationState || tr("IN PROGRESS")}
+                        </Text>
+                        <Text style={s.h2}>{tr(a.title)}</Text>
+                        <Button
+                          secondary
+                          onPress={() =>
+                            router.push(
+                              a.status === "ACTIVE"
+                                ? `/exam/${a.id}`
+                                : `/result/${a.id}`,
+                            )
+                          }
+                        >
+                          {a.status === "ACTIVE"
+                            ? tr("Resume test")
+                            : tr("View result")}
+                        </Button>
+                      </View>
+                    )),
+                  )
                 ) : (
-                  <Text style={s.muted}>Your attempts will appear here.</Text>
+                  <Text style={s.muted}>
+                    {tr("Your attempts will appear here.")}
+                  </Text>
                 )
+              ) : tab === "Resources" ? (
+                <NativeResources />
               ) : (
                 <View style={s.card}>
-                  <Text style={s.h2}>{user?.name}</Text>
-                  <Text style={s.text}>{user?.email}</Text>
+                  <NativeAccountEditor onSaved={() => void load()} />
+                  <NativeBilling />
+                  <NativePhone link />
+                  <Text style={s.h2}>{tr(user?.name)}</Text>
+                  <Text style={s.text}>{tr(user?.email)}</Text>
                   <Text style={s.muted}>
-                    Class {user?.classLevel} · {user?.stream}
+                    {tr("Class ")}
+                    {tr(user?.classLevel)}
+                    {tr(" \xB7 ")}
+                    {tr(user?.stream)}
                   </Text>
-                  <Text style={[s.muted, { marginVertical: 20 }]}>
-                    Use the website for password reset, study pass checkout and
-                    administration.
+                  <Text
+                    style={[
+                      s.muted,
+                      {
+                        marginVertical: 20,
+                      },
+                    ]}
+                  >
+                    {tr(
+                      "Use the website for password reset, study pass checkout and administration.",
+                    )}
                   </Text>
                   <Button
                     secondary
@@ -282,12 +396,12 @@ export default function Home() {
                       setAttempts([]);
                     }}
                   >
-                    Sign out
+                    {tr("Sign out")}
                   </Button>
                 </View>
               )}
               <Button secondary onPress={() => void load()}>
-                Refresh
+                {tr("Refresh")}
               </Button>
             </>
           )}

@@ -1,3 +1,4 @@
+import { tr, useLanguage } from "@boardtestify/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
@@ -12,10 +13,16 @@ import {
   Shield,
   BookOpen,
 } from "lucide-react";
-import { answerStatus, hasAnswer } from "@boardtestify/domain";
-import { request } from "./api";
+import {
+  answerStatus,
+  hasAnswer,
+  answerPresent,
+  isDescriptive,
+} from "@boardtestify/domain";
+import { request, uploadFile } from "./api";
 import { Notice, Empty, useLoad } from "./main";
 export function Exam() {
+  useLanguage();
   const { id } = useParams();
   const nav = useNavigate();
   const [a, setA] = useState(null),
@@ -30,10 +37,15 @@ export function Exam() {
     [queueSize, setQueueSize] = useState(0),
     [conflict, setConflict] = useState(false),
     [bilingual, setBilingual] = useState(false);
+  const [uploading, setUploading] = useState(false),
+    [readingLeft, setReadingLeft] = useState(0);
   const aRef = useRef(null),
     queue = useRef({}),
     busy = useRef(false),
-    clock = useRef({ server: 0, mono: 0 }),
+    clock = useRef({
+      server: 0,
+      mono: 0,
+    }),
     seq = useRef(0),
     conflicted = useRef(false),
     mounted = useRef(true);
@@ -46,14 +58,19 @@ export function Exam() {
   const apply = useCallback(
     (data) => {
       aRef.current = data;
-      setA({ ...data });
+      setA({
+        ...data,
+      });
       clock.current = {
         server: Date.parse(data.serverNow),
         mono: performance.now(),
       };
       localStorage.setItem(
         cacheKey,
-        JSON.stringify({ ...data, cachedAt: Date.now() }),
+        JSON.stringify({
+          ...data,
+          cachedAt: Date.now(),
+        }),
       );
     },
     [cacheKey],
@@ -67,6 +84,11 @@ export function Exam() {
         const result = await request(`/attempts/${id}/answer`, snapshot, "PUT");
         const current = queue.current[qid];
         aRef.current.answers[qid] = result.answer;
+        if (result.feedback)
+          aRef.current.feedback = {
+            ...(aRef.current.feedback || {}),
+            [qid]: result.feedback,
+          };
         clock.current = {
           server: Date.parse(result.serverNow),
           mono: performance.now(),
@@ -83,7 +105,10 @@ export function Exam() {
             cachedAt: Date.now(),
           }),
         );
-        if (mounted.current) setA({ ...aRef.current });
+        if (mounted.current)
+          setA({
+            ...aRef.current,
+          });
       }
       return Object.keys(queue.current).length === 0;
     } catch (e) {
@@ -120,7 +145,10 @@ export function Exam() {
       .then((data) => {
         if (mounted.current) {
           apply(data);
-          if (data.status !== "ACTIVE") nav(`/result/${id}`, { replace: true });
+          if (data.status !== "ACTIVE")
+            nav(`/result/${id}`, {
+              replace: true,
+            });
         }
       })
       .catch((e) => {
@@ -178,7 +206,9 @@ export function Exam() {
         if (mounted.current) {
           apply(fresh);
           if (fresh.status !== "ACTIVE")
-            nav(`/result/${id}`, { replace: true });
+            nav(`/result/${id}`, {
+              replace: true,
+            });
         }
       } catch {}
     }, 30000);
@@ -191,6 +221,15 @@ export function Exam() {
           (clock.current.server + performance.now() - clock.current.mono),
       );
       setRemaining(left);
+      setReadingLeft(
+        current.readUntil
+          ? Math.max(
+              0,
+              Date.parse(current.readUntil) -
+                (clock.current.server + performance.now() - clock.current.mono),
+            )
+          : 0,
+      );
     }, 250);
     return () => {
       clearInterval(autosave);
@@ -210,10 +249,14 @@ export function Exam() {
       "Time is up. Finalizing the answers already saved on the server…",
     );
     request(`/attempts/${id}/submit`, {})
-      .then(() => nav(`/result/${id}`, { replace: true }))
+      .then(() =>
+        nav(`/result/${id}`, {
+          replace: true,
+        }),
+      )
       .catch((e) => setError(e.message));
   }, [remaining, id, nav]);
-  function change(value, review) {
+  function change(value, review, attachmentIds) {
     const current = aRef.current;
     if (!current || conflicted.current || remaining === 0) return;
     const q = current.questions[index];
@@ -225,9 +268,41 @@ export function Exam() {
       review: review ?? local?.review ?? false,
       visited: true,
       generation: ++seq.current,
+      attachmentIds: attachmentIds ?? local?.attachmentIds ?? [],
     };
     persist();
-    setA({ ...current });
+    setA({
+      ...current,
+    });
+  }
+  async function uploadSheet(file) {
+    const target = aRef.current.questions[index];
+    setUploading(true);
+    setError("");
+    try {
+      const uploaded = await uploadFile(`/attempts/${id}/sheets`, file, {
+        questionId: target._id,
+      });
+      const local =
+        queue.current[target._id] || aRef.current.answers[target._id];
+      queue.current[target._id] = {
+        questionId: target._id,
+        version: local?.version ?? 0,
+        value: local?.value || "",
+        review: local?.review ?? false,
+        visited: true,
+        attachmentIds: [...(local?.attachmentIds || []), uploaded.id],
+        generation: ++seq.current,
+      };
+      persist();
+      setA({
+        ...aRef.current,
+      });
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setUploading(false);
+    }
   }
   useEffect(() => {
     if (!a || a.status !== "ACTIVE") return;
@@ -247,7 +322,9 @@ export function Exam() {
       await request(`/attempts/${id}/submit`, {});
       localStorage.removeItem(queueKey);
       localStorage.removeItem(cacheKey);
-      nav(`/result/${id}`, { replace: true });
+      nav(`/result/${id}`, {
+        replace: true,
+      });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -263,7 +340,10 @@ export function Exam() {
       setConflict(false);
       setError("");
       apply(fresh);
-      if (fresh.status !== "ACTIVE") nav(`/result/${id}`, { replace: true });
+      if (fresh.status !== "ACTIVE")
+        nav(`/result/${id}`, {
+          replace: true,
+        });
     } catch (e) {
       setError(e.message);
     }
@@ -271,16 +351,16 @@ export function Exam() {
   if (!a)
     return (
       <div className="reset-wrap">
-        <Link to="/app/tests">← Test library</Link>
-        <Notice error>{error}</Notice>
-        <p>Opening your saved attempt…</p>
+        <Link to="/app/tests">{tr("\u2190 Test library")}</Link>
+        <Notice error>{tr(error)}</Notice>
+        <p>{tr("Opening your saved attempt\u2026")}</p>
       </div>
     );
   const q = a.questions[index],
     answer = queue.current[q._id] || a.answers[q._id],
     section = a.snapshot.sections.find((s) => s.id === q.sectionId);
   const count = a.questions.filter((q) =>
-    hasAnswer((queue.current[q._id] || a.answers[q._id])?.value),
+    answerPresent(queue.current[q._id] || a.answers[q._id]),
   ).length;
   const secs = remaining === null ? null : Math.ceil(remaining / 1000);
   const time =
@@ -296,11 +376,12 @@ export function Exam() {
       <header className="exam-header">
         <Link to="/app/attempts" className="exam-brand">
           <span className="logo-icon">
-            B<span>✓</span>
+            {tr("B")}
+            <span>{tr("\u2713")}</span>
           </span>
           <div>
-            <strong>BoardTestify</strong>
-            <small>{a.snapshot.title}</small>
+            <strong>{tr("BoardTestify")}</strong>
+            <small>{tr(a.snapshot.title)}</small>
           </div>
         </Link>
         <div className="row">
@@ -308,27 +389,33 @@ export function Exam() {
             className={`timer ${remaining !== null && remaining < 60000 ? "urgent" : ""}`}
           >
             <Timer size={19} />
-            {time}
+            {tr(time)}
           </span>
           <button className="button primary" onClick={() => setConfirm(true)}>
-            Submit test <ArrowUpRight size={16} />
+            {tr("Submit test ")}
+            <ArrowUpRight size={16} />
           </button>
         </div>
       </header>
       <div className="exam-subbar">
         <span>
-          <Shield size={14} /> Exam time is verified by the server
+          <Shield size={14} />
+          {tr(" Exam time is verified by the server")}
         </span>
         <span className={queueSize ? "accent" : "saved"}>
           {offline ? (
             <>
-              <WifiOff size={14} /> Offline · {queueSize} pending
+              <WifiOff size={14} />
+              {tr(" Offline \xB7 ")}
+              {tr(queueSize)}
+              {tr(" pending")}
             </>
           ) : queueSize ? (
-            `${queueSize} answer update(s) pending`
+            tr("{0} answer update(s) pending", [queueSize])
           ) : (
             <>
-              <Check size={14} /> All answers saved
+              <Check size={14} />
+              {tr(" All answers saved")}
             </>
           )}
         </span>
@@ -336,43 +423,60 @@ export function Exam() {
       <div className="exam-layout">
         <main className="exam-question">
           <div className="section-tabs">
-            {a.snapshot.sections.map((s) => (
-              <button
-                className={s.id === q.sectionId ? "active" : ""}
-                key={s.id}
-                onClick={() =>
-                  setIndex(a.questions.findIndex((q) => q.sectionId === s.id))
-                }
-              >
-                {s.title}
-              </button>
-            ))}
+            {tr(
+              a.snapshot.sections.map((s) => (
+                <button
+                  className={s.id === q.sectionId ? "active" : ""}
+                  key={s.id}
+                  onClick={() =>
+                    setIndex(a.questions.findIndex((q) => q.sectionId === s.id))
+                  }
+                >
+                  {tr(s.title)}
+                </button>
+              )),
+            )}
           </div>
-          <Notice error>{error}</Notice>
-          <Notice>{message}</Notice>
+          <Notice error>{tr(error)}</Notice>
+          <Notice>{tr(message)}</Notice>
+          {readingLeft > 0 && (
+            <Notice>
+              {tr("Reading time: ")}
+              {tr(Math.ceil(readingLeft / 60000))}
+              {tr(
+                " minute(s) remaining. Answers unlock after the reading period.",
+              )}
+            </Notice>
+          )}
           {conflict && (
             <button onClick={discard} className="button danger">
-              Discard local changes and reload saved answers
+              {tr("Discard local changes and reload saved answers")}
             </button>
           )}
           <div className="question-top">
             <span className="eyebrow">
-              QUESTION {String(index + 1).padStart(2, "0")} OF{" "}
-              {a.questions.length}
+              {tr("QUESTION ")}
+              {tr(String(index + 1).padStart(2, "0"))}
+              {tr(" OF")}
+              {tr(" ")}
+              {tr(a.questions.length)}
             </span>
             <div className="row">
               <span className="tag">
-                +{q.maximumMarks} / −{q.negativeMarks}
+                {tr("+")}
+                {tr(q.maximumMarks)}
+                {tr(" / \u2212")}
+                {tr(q.negativeMarks)}
               </span>
               <button
                 className="icon-button"
-                aria-label="Show bilingual text"
+                aria-label={tr("Show bilingual text")}
                 onClick={() => setBilingual(!bilingual)}
               >
-                EN / हिं
+                {tr("EN / \u0939\u093F\u0902")}
               </button>
               <button
-                aria-label="Toggle question palette"
+                aria-label={tr("Toggle question palette")}
                 className="icon-button mobile-only"
                 onClick={() => setPalette(!palette)}
               >
@@ -382,88 +486,161 @@ export function Exam() {
           </div>
           {section.instructions && (
             <p className="section-instructions">
-              {section.instructions}
+              {tr(section.instructions)}
               {section.maxAnswers
-                ? ` · Attempt up to ${section.maxAnswers} questions.`
-                : ""}
+                ? tr(" \xB7 Attempt up to {0} questions.", [section.maxAnswers])
+                : tr("")}
             </p>
           )}
-          <h2 className="question-text">{q.text}</h2>
+          <h2 className="question-text">{tr(q.text)}</h2>
           {bilingual && q.translation && (
-            <p className="question-text translation">{q.translation}</p>
+            <p className="question-text translation">{tr(q.translation)}</p>
           )}
           {q.imageKey && <QuestionImage imageKey={q.imageKey} attemptId={id} />}
           <fieldset
             className="answer-field"
-            disabled={conflict || remaining === 0}
+            disabled={conflict || remaining === 0 || readingLeft > 0}
           >
-            <legend className="sr-only">Your answer</legend>
+            <legend className="sr-only">{tr("Your answer")}</legend>
             {q.type.endsWith("CHOICE") ? (
               <div className="options">
-                {q.options.map((o, i) => {
-                  const values = Array.isArray(answer?.value)
-                    ? answer.value
-                    : [];
-                  return (
-                    <label
-                      className={`option ${values.includes(o.id) ? "chosen" : ""}`}
-                      key={o.id}
-                    >
-                      <input
-                        type={q.type === "SINGLE_CHOICE" ? "radio" : "checkbox"}
-                        name={q._id}
-                        checked={values.includes(o.id)}
-                        onChange={() =>
-                          change(
-                            q.type === "SINGLE_CHOICE"
-                              ? [o.id]
-                              : values.includes(o.id)
-                                ? values.filter((v) => v !== o.id)
-                                : [...values, o.id],
-                          )
-                        }
-                      />
-                      <span className="option-letter">
-                        {String.fromCharCode(65 + i)}
-                      </span>
-                      <span>{o.text}</span>
-                      {values.includes(o.id) && <Check size={18} />}
-                    </label>
-                  );
-                })}
+                {tr(
+                  q.options.map((o, i) => {
+                    const values = Array.isArray(answer?.value)
+                      ? answer.value
+                      : [];
+                    return (
+                      <label
+                        className={`option ${values.includes(o.id) ? "chosen" : ""}`}
+                        key={o.id}
+                      >
+                        <input
+                          type={
+                            q.type === "SINGLE_CHOICE" ? "radio" : "checkbox"
+                          }
+                          name={q._id}
+                          checked={values.includes(o.id)}
+                          onChange={() =>
+                            change(
+                              q.type === "SINGLE_CHOICE"
+                                ? [o.id]
+                                : values.includes(o.id)
+                                  ? values.filter((v) => v !== o.id)
+                                  : [...values, o.id],
+                            )
+                          }
+                        />
+                        <span className="option-letter">
+                          {tr(String.fromCharCode(65 + i))}
+                        </span>
+                        <span className="option-text">{tr(o.text)}</span>
+                        {values.includes(o.id) && <Check size={18} />}
+                      </label>
+                    );
+                  }),
+                )}
               </div>
             ) : (
               <>
                 <label className="answer-label">
                   {q.type === "NUMERICAL"
-                    ? "Your numerical answer"
-                    : "Write your answer in Hindi or English"}
+                    ? tr("Your numerical answer")
+                    : tr("Write your answer in Hindi or English")}
                   <textarea
                     rows={q.type === "LONG_ANSWER" ? 12 : 7}
                     value={
                       typeof answer?.value === "string" ? answer.value : ""
                     }
                     onChange={(e) => change(e.target.value)}
-                    placeholder="Start your answer here…"
+                    placeholder={tr("Start your answer here…")}
                     maxLength={20000}
                   />
                 </label>
                 <span className="small muted">
                   {typeof answer?.value === "string"
-                    ? answer.value.trim().split(/\s+/u).filter(Boolean).length
-                    : 0}{" "}
-                  words{q.wordLimit ? ` / ${q.wordLimit} word limit` : ""} ·
-                  Changes autosave
+                    ? tr(
+                        answer.value.trim().split(/\s+/u).filter(Boolean)
+                          .length,
+                      )
+                    : 0}
+                  {tr(" ")}
+                  {tr("words")}
+                  {q.wordLimit
+                    ? tr(" / {0} word limit", [q.wordLimit])
+                    : tr("")}
+                  {tr(" \xB7 Changes autosave")}
                 </span>
               </>
             )}
           </fieldset>
+          {isDescriptive(q.type) && (
+            <div className="form-section">
+              <h3>{tr("Upload handwritten answer pages")}</h3>
+              <p className="small muted">
+                {tr(
+                  "JPEG, PNG or WebP \xB7 up to 5 MB per page \xB7 maximum four attached pages. Include diagrams in the photo. Save before the exam deadline.",
+                )}
+              </p>
+              <input
+                aria-label={tr("Upload answer sheet")}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={
+                  uploading ||
+                  conflict ||
+                  remaining === 0 ||
+                  readingLeft > 0 ||
+                  (answer?.attachmentIds?.length || 0) >= 4
+                }
+                onChange={(e) => {
+                  if (e.target.files?.[0]) uploadSheet(e.target.files[0]);
+                  e.target.value = "";
+                }}
+              />
+              {uploading && (
+                <p className="accent small">
+                  {tr("Uploading and validating page\u2026")}
+                </p>
+              )}
+              <AttachmentGallery
+                ids={answer?.attachmentIds || []}
+                remove={(assetId) =>
+                  change(
+                    answer?.value || "",
+                    answer?.review,
+                    (answer.attachmentIds || []).filter((x) => x !== assetId),
+                  )
+                }
+              />
+            </div>
+          )}
+          {a.feedback?.[q._id] && (
+            <div className="notice">
+              <strong>
+                {tr("Practice feedback \xB7 ")}
+                {tr(a.feedback[q._id].awardedMarks)}
+                {tr(" / ")}
+                {tr(q.maximumMarks)}
+              </strong>
+              <p>
+                {tr("Correct answer: ")}
+                {tr(
+                  a.feedback[q._id].correct
+                    .map((v) => q.options.find((o) => o.id === v)?.text || v)
+                    .join(", "),
+                )}
+              </p>
+              <p>{tr(a.feedback[q._id].explanation)}</p>
+            </div>
+          )}
           <div className="exam-controls">
             <button
               className="button ghost"
-              onClick={() => change(q.type.endsWith("CHOICE") ? [] : "")}
+              onClick={() =>
+                change(q.type.endsWith("CHOICE") ? [] : "", false, [])
+              }
             >
-              Clear response
+              {tr("Clear response")}
             </button>
             <button
               className={`button ${answer?.review ? "review-active" : "ghost"}`}
@@ -474,8 +651,9 @@ export function Exam() {
                 )
               }
             >
-              <Flag size={16} />{" "}
-              {answer?.review ? "Unmark review" : "Mark for review"}
+              <Flag size={16} />
+              {tr(" ")}
+              {answer?.review ? tr("Unmark review") : tr("Mark for review")}
             </button>
             <div className="row">
               <button
@@ -483,7 +661,8 @@ export function Exam() {
                 disabled={index === 0}
                 onClick={() => setIndex(index - 1)}
               >
-                <ChevronLeft size={17} /> Previous
+                <ChevronLeft size={17} />
+                {tr(" Previous")}
               </button>
               <button
                 className="button primary"
@@ -493,7 +672,8 @@ export function Exam() {
                   else setConfirm(true);
                 }}
               >
-                Save & next <ChevronRight size={17} />
+                {tr("Save & next ")}
+                <ChevronRight size={17} />
               </button>
             </div>
           </div>
@@ -504,46 +684,57 @@ export function Exam() {
               <BookOpen size={20} />
             </span>
             <div>
-              <strong>Question navigator</strong>
+              <strong>{tr("Question navigator")}</strong>
               <small>
-                {count} / {a.questions.length} answered
+                {tr(count)}
+                {tr(" / ")}
+                {tr(a.questions.length)}
+                {tr(" answered")}
               </small>
             </div>
           </div>
           <div className="palette-grid">
-            {a.questions.map((q, i) => (
-              <button
-                aria-label={`Question ${i + 1}: ${answerStatus(queue.current[q._id] || a.answers[q._id])}`}
-                className={`${answerStatus(queue.current[q._id] || a.answers[q._id])} ${index === i ? "current" : ""}`}
-                key={q._id}
-                onClick={() => {
-                  setIndex(i);
-                  setPalette(false);
-                }}
-              >
-                {i + 1}
-              </button>
-            ))}
+            {tr(
+              a.questions.map((q, i) => (
+                <button
+                  aria-label={tr("Question {0}: {1}", [
+                    i + 1,
+                    answerStatus(queue.current[q._id] || a.answers[q._id]),
+                  ])}
+                  className={`${answerStatus(queue.current[q._id] || a.answers[q._id])} ${index === i ? "current" : ""}`}
+                  key={q._id}
+                  onClick={() => {
+                    setIndex(i);
+                    setPalette(false);
+                  }}
+                >
+                  {tr(i + 1)}
+                </button>
+              )),
+            )}
           </div>
           <div className="legend">
-            {[
-              ["NOT_VISITED", "Not visited"],
-              ["NOT_ANSWERED", "Not answered"],
-              ["ANSWERED", "Answered"],
-              ["MARKED_FOR_REVIEW", "Marked for review"],
-              ["ANSWERED_AND_MARKED_FOR_REVIEW", "Answered & marked"],
-            ].map(([c, t]) => (
-              <span key={c}>
-                <i className={c} />
-                {t}
-              </span>
-            ))}
+            {tr(
+              [
+                ["NOT_VISITED", "Not visited"],
+                ["NOT_ANSWERED", "Not answered"],
+                ["ANSWERED", "Answered"],
+                ["MARKED_FOR_REVIEW", "Marked for review"],
+                ["ANSWERED_AND_MARKED_FOR_REVIEW", "Answered & marked"],
+              ].map(([c, t]) => (
+                <span key={c}>
+                  <i className={c} />
+                  {tr(t)}
+                </span>
+              )),
+            )}
           </div>
           <div className="palette-note">
             <Shield size={18} />
             <p>
-              Keep this tab open while answers are saving. Your timer continues
-              if you leave.
+              {tr(
+                "Keep this tab open while answers are saving. Your timer continues if you leave.",
+              )}
             </p>
           </div>
         </aside>
@@ -556,30 +747,32 @@ export function Exam() {
             aria-labelledby="submit-title"
             className="modal"
           >
-            <span className="eyebrow">READY TO FINISH?</span>
-            <h2 id="submit-title">Submit your test?</h2>
+            <span className="eyebrow">{tr("READY TO FINISH?")}</span>
+            <h2 id="submit-title">{tr("Submit your test?")}</h2>
             <p>
-              {count} answered · {a.questions.length - count} unanswered.
-              Submitted answers cannot be changed.
+              {tr(count)}
+              {tr(" answered \xB7 ")}
+              {tr(a.questions.length - count)}
+              {tr(" unanswered. Submitted answers cannot be changed.")}
             </p>
             <p className="small muted">
-              Marked-for-review answers are also included in your score.
+              {tr("Marked-for-review answers are also included in your score.")}
             </p>
-            <Notice error>{error}</Notice>
+            <Notice error>{tr(error)}</Notice>
             <div className="row">
               <button
                 className="button ghost"
                 disabled={sending}
                 onClick={() => setConfirm(false)}
               >
-                Keep reviewing
+                {tr("Keep reviewing")}
               </button>
               <button
                 className="button primary"
-                disabled={sending || conflict}
+                disabled={sending || conflict || uploading}
                 onClick={submit}
               >
-                {sending ? "Submitting…" : "Submit test"}
+                {sending ? tr("Submitting…") : tr("Submit test")}
               </button>
             </div>
           </div>
@@ -589,17 +782,81 @@ export function Exam() {
   );
 }
 function QuestionImage({ imageKey, attemptId }) {
+  useLanguage();
   const { data, error } = useLoad(
     `/attempts/${attemptId}/image?key=${encodeURIComponent(imageKey)}`,
   );
   return data ? (
-    <img className="question-image" src={data.url} alt="Question diagram" />
+    <img
+      className="question-image"
+      src={data.url}
+      alt={tr("Question diagram")}
+    />
   ) : (
-    <Notice error>{error}</Notice>
+    <Notice error>{tr(error)}</Notice>
+  );
+}
+export function AttachmentGallery({ ids, remove }) {
+  useLanguage();
+  return ids.length ? (
+    <div className="attachment-grid">
+      {tr(
+        ids.map((id, i) => (
+          <AttachmentPage key={id} assetId={id} index={i} remove={remove} />
+        )),
+      )}
+    </div>
+  ) : null;
+}
+function AttachmentPage({ assetId, index, remove }) {
+  useLanguage();
+  const { data, error } = useLoad(`/attachments/${assetId}`);
+  return (
+    <div className="attachment-page">
+      <small>
+        {tr("Answer page ")}
+        {tr(index + 1)}
+      </small>
+      {data && (
+        <a href={data.url} target="_blank" rel="noreferrer">
+          <img src={data.url} alt={tr("Answer-sheet page {0}", [index + 1])} />
+        </a>
+      )}
+      {data?.text && (
+        <details>
+          <summary>{tr("OCR transcription (check against image)")}</summary>
+          <p className="small">{tr(data.text)}</p>
+        </details>
+      )}
+      <Notice error>{tr(error)}</Notice>
+      {remove && (
+        <button className="button ghost" onClick={() => remove(assetId)}>
+          {tr("Remove page")}
+        </button>
+      )}
+    </div>
   );
 }
 export function Result() {
+  useLanguage();
   const { id } = useParams();
+  const nav = useNavigate();
+  const [retryError, setRetryError] = useState(""),
+    [retryBusy, setRetryBusy] = useState(false);
+  async function retry(filter) {
+    setRetryBusy(true);
+    try {
+      const a = await request(`/attempts/${id}/retry`, {
+        filter,
+        feedbackMode: "IMMEDIATE",
+      });
+      nav(`/exam/${a.id}`);
+    } catch (e) {
+      setRetryError(e.message);
+    } finally {
+      setRetryBusy(false);
+    }
+  }
   const { data: r, error, reload } = useLoad(`/attempts/${id}/result`);
   useEffect(() => {
     if (!r?.provisional) return;
@@ -609,123 +866,173 @@ export function Result() {
   return (
     <div className="result-wrap">
       <Link className="muted small" to="/app/attempts">
-        ← Back to my attempts
+        {tr("\u2190 Back to my attempts")}
       </Link>
-      <Notice error>{error}</Notice>
+      <Notice error>{tr(error)}</Notice>
       {r ? (
         <>
           <div className="result-hero">
-            <span className="eyebrow">ANOTHER STEP FORWARD</span>
-            <h1>{r.title}</h1>
+            <span className="eyebrow">{tr("ANOTHER STEP FORWARD")}</span>
+            <h1>{tr(r.title)}</h1>
             <span className="tag">
               {r.provisional
-                ? "Provisional · evaluation in progress"
-                : "Final result"}
+                ? tr("Provisional · evaluation in progress")
+                : tr("Final result")}
             </span>
             <div className="result-score">
-              {r.awardedMarks}
-              <span>/ {r.maximumMarks}</span>
+              {tr(r.awardedMarks)}
+              <span>
+                {tr("/ ")}
+                {tr(r.maximumMarks)}
+              </span>
             </div>
             <p>
               {r.provisional
-                ? "Descriptive answers awaiting AI or manual review are excluded from this score."
-                : "Review your answers and use the feedback for your next attempt."}
+                ? tr(
+                    "Descriptive answers awaiting AI or manual review are excluded from this score.",
+                  )
+                : tr(
+                    "Review your answers and use the feedback for your next attempt.",
+                  )}
             </p>
             <Link className="button primary" to="/app/tests">
-              Keep practicing <ArrowUpRight size={17} />
+              {tr("Keep practicing ")}
+              <ArrowUpRight size={17} />
             </Link>
           </div>
+          <div className="toolbar">
+            <button
+              className="button subtle"
+              disabled={retryBusy}
+              onClick={() => retry("INCORRECT")}
+            >
+              {tr("Retry incorrect questions")}
+            </button>
+            <button
+              className="button subtle"
+              disabled={retryBusy}
+              onClick={() => retry("UNANSWERED")}
+            >
+              {tr("Retry unanswered questions")}
+            </button>
+          </div>
+          <Notice error>{tr(retryError)}</Notice>
           <div className="result-answers">
-            {r.questions.map((q, i) => {
-              const e = r.evaluations[q._id],
-                a = r.answers[q._id];
-              return (
-                <article className="panel" key={q._id}>
-                  <div className="row between">
-                    <span className="eyebrow">
-                      QUESTION {i + 1} · {q.type.replaceAll("_", " ")}
-                    </span>
-                    <span className="tag">
-                      {e?.status === "EVALUATED"
-                        ? `${e.awardedMarks} / ${q.maximumMarks}`
-                        : "Awaiting review"}
-                    </span>
-                  </div>
-                  <h3>{q.text}</h3>
-                  <div className="answer-block">
-                    <small className="muted">YOUR ANSWER</small>
-                    <p>
-                      {Array.isArray(a?.value)
-                        ? a.value
+            {tr(
+              r.questions.map((q, i) => {
+                const e = r.evaluations[q._id],
+                  a = r.answers[q._id];
+                return (
+                  <article className="panel" key={q._id}>
+                    <div className="row between">
+                      <span className="eyebrow">
+                        {tr("QUESTION ")}
+                        {tr(i + 1)}
+                        {tr(" \xB7 ")}
+                        {tr(q.type.replaceAll("_", " "))}
+                      </span>
+                      <span className="tag">
+                        {e?.status === "EVALUATED"
+                          ? tr("{0} / {1}", [e.awardedMarks, q.maximumMarks])
+                          : e?.status === "NOT_COUNTED"
+                            ? tr("Not counted: section choice limit")
+                            : tr("Awaiting review")}
+                      </span>
+                    </div>
+                    <h3>{tr(q.text)}</h3>
+                    <div className="answer-block">
+                      <small className="muted">{tr("YOUR ANSWER")}</small>
+                      <p>
+                        {Array.isArray(a?.value)
+                          ? tr(
+                              a.value
+                                .map(
+                                  (v) =>
+                                    q.options.find((o) => o.id === v)?.text ||
+                                    v,
+                                )
+                                .join(", "),
+                            )
+                          : a?.value || tr("Unanswered")}
+                      </p>
+                    </div>
+                    <AttachmentGallery ids={a?.attachmentIds || []} />
+                    {q.correct.length > 0 && (
+                      <p className="saved">
+                        {tr("Correct answer:")}
+                        {tr(" ")}
+                        {tr(
+                          q.correct
                             .map(
                               (v) =>
                                 q.options.find((o) => o.id === v)?.text || v,
                             )
-                            .join(", ")
-                        : a?.value || "Unanswered"}
-                    </p>
-                  </div>
-                  {q.correct.length > 0 && (
-                    <p className="saved">
-                      Correct answer:{" "}
-                      {q.correct
-                        .map(
-                          (v) => q.options.find((o) => o.id === v)?.text || v,
-                        )
-                        .join(", ")}
-                    </p>
-                  )}
-                  {q.referenceAnswer && (
-                    <div className="answer-block">
-                      <small className="muted">REFERENCE ANSWER</small>
-                      <p>{q.referenceAnswer}</p>
-                    </div>
-                  )}
-                  {q.explanation && <p className="muted">{q.explanation}</p>}
-                  {e?.criteria?.map((c) => (
-                    <div className="criterion" key={c.id}>
-                      <strong>
-                        {q.rubric.find((r) => r.id === c.id)?.name}{" "}
-                        <span className="accent">{c.awardedMarks}</span>
-                      </strong>
-                      <p>{c.feedback}</p>
-                    </div>
-                  ))}
-                  {e?.status === "REVIEW" && (
-                    <Notice>
-                      This answer requires manual review before marks are
-                      finalized.
-                    </Notice>
-                  )}
-                  {[
-                    "strengths",
-                    "missingPoints",
-                    "errors",
-                    "improvementAdvice",
-                  ].map((key) =>
-                    e?.[key]?.length ? (
-                      <div key={key}>
-                        <h4>
-                          {
-                            {
-                              strengths: "Strengths",
-                              missingPoints: "Missing points",
-                              errors: "Corrections",
-                              improvementAdvice: "For next time",
-                            }[key]
-                          }
-                        </h4>
-                        <ul>
-                          {e[key].map((s, j) => (
-                            <li key={j}>{s}</li>
-                          ))}
-                        </ul>
+                            .join(", "),
+                        )}
+                      </p>
+                    )}
+                    {q.referenceAnswer && (
+                      <div className="answer-block">
+                        <small className="muted">
+                          {tr("REFERENCE ANSWER")}
+                        </small>
+                        <p>{tr(q.referenceAnswer)}</p>
                       </div>
-                    ) : null,
-                  )}
-                </article>
-              );
-            })}
+                    )}
+                    {q.explanation && (
+                      <p className="muted">{tr(q.explanation)}</p>
+                    )}
+                    {tr(
+                      e?.criteria?.map((c) => (
+                        <div className="criterion" key={c.id}>
+                          <strong>
+                            {tr(q.rubric.find((r) => r.id === c.id)?.name)}
+                            {tr(" ")}
+                            <span className="accent">{tr(c.awardedMarks)}</span>
+                          </strong>
+                          <p>{tr(c.feedback)}</p>
+                        </div>
+                      )),
+                    )}
+                    {e?.status === "REVIEW" && (
+                      <Notice>
+                        {tr(
+                          "This answer requires manual review before marks are finalized.",
+                        )}
+                      </Notice>
+                    )}
+                    {tr(
+                      [
+                        "strengths",
+                        "missingPoints",
+                        "errors",
+                        "improvementAdvice",
+                      ].map((key) =>
+                        e?.[key]?.length ? (
+                          <div key={key}>
+                            <h4>
+                              {tr(
+                                {
+                                  strengths: "Strengths",
+                                  missingPoints: "Missing points",
+                                  errors: "Corrections",
+                                  improvementAdvice: "For next time",
+                                }[key],
+                              )}
+                            </h4>
+                            <ul>
+                              {tr(
+                                e[key].map((s, j) => <li key={j}>{tr(s)}</li>),
+                              )}
+                            </ul>
+                          </div>
+                        ) : null,
+                      ),
+                    )}
+                  </article>
+                );
+              }),
+            )}
           </div>
         </>
       ) : (

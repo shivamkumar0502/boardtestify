@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@import "@fontsource/noto-sans-devanagari/devanagari-400.css";
+@import "@fontsource/noto-sans-devanagari/devanagari-600.css";
+@import "@fontsource/noto-sans-devanagari/devanagari-700.css";
 @theme {
   --color-brand: #f97316;
 }
@@ -6,6 +9,7 @@
   color-scheme: dark;
   font-family:
     Inter,
+    "Noto Sans Devanagari",
     ui-sans-serif,
     system-ui,
     -apple-system,
@@ -1171,7 +1175,7 @@ label {
   overflow-wrap: anywhere;
 }
 .code-editor {
-  font-family: ui-monospace, monospace;
+  font-family: ui-monospace, "Noto Sans Devanagari", monospace;
   font-size: 12px;
   min-height: 360px;
   tab-size: 2;
@@ -1312,7 +1316,7 @@ pre {
 }
 .timer {
   font-variant-numeric: tabular-nums;
-  font-family: ui-monospace, monospace;
+  font-family: ui-monospace, "Noto Sans Devanagari", monospace;
   font-size: 20px;
   color: #e1e1e7;
   display: flex;
@@ -1446,8 +1450,9 @@ pre {
   font-size: 12px;
   color: #9999a8;
 }
-.option > span:nth-last-child(2) {
+.option-text {
   flex: 1;
+  min-width: 0;
 }
 .option.chosen {
   border-color: #ca672f;
@@ -2230,4 +2235,186 @@ pre {
     animation: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+.authoring-form {
+  margin-top: 24px;
+}
+.form-section {
+  margin: 22px 0;
+  padding: 20px 0;
+  border-top: 1px solid #303037;
+}
+.checkbox-label {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+  margin: 14px 0;
+  font-size: 12px;
+}
+.checkbox-label input,
+.question-checkbox input {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  accent-color: #ff7a35;
+}
+.option-editor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 15px 0;
+}
+.option-editor > input:first-child {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: #ff7a35;
+}
+.question-checkbox {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid #33333b;
+  border-radius: 6px;
+  margin: 10px 0;
+}
+.question-checkbox small {
+  display: block;
+  color: #92929f;
+  margin-top: 8px;
+}
+.question-preview {
+  border-style: dashed;
+  margin-top: 25px;
+}
+.question-preview p {
+  margin: 10px 0;
+}
+.attachment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin: 18px 0;
+}
+.attachment-page {
+  border: 1px solid #33333d;
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 0;
+}
+.attachment-page > small {
+  display: block;
+  color: #b7b7c1;
+  margin-bottom: 10px;
+}
+.attachment-page img {
+  width: 100%;
+  height: 200px;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 4px;
+}
+.attachment-page details p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.plan-card {
+  border: 1px solid #37312c;
+  border-radius: 8px;
+  margin: 17px 0;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+.plan-card small {
+  display: block;
+  color: #9b9ba9;
+  margin-top: 9px;
+}
+.announcements .notice p {
+  font-size: 13px;
+  color: #b9cbbf;
+  white-space: pre-wrap;
+}
+.form-section > h3 {
+  margin-bottom: 14px;
+}
+.form-section > p {
+  margin-bottom: 15px;
+}
+.authoring-form select {
+  max-width: 100%;
+}
+.panel details summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: #bdbdc8;
+  margin: 15px 0;
+}
+.attachment-page details {
+  font-size: 11px;
+}
+.grid-three > button {
+  align-self: end;
+  margin-bottom: 18px;
+}
+@media (max-width: 540px) {
+  .option-editor {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .option-editor > input:nth-child(2) {
+    flex: 1;
+    min-width: 160px;
+  }
+  .option-editor > .button {
+    margin-left: auto;
+    font-size: 11px;
+  }
+  .plan-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .attachment-grid {
+    grid-template-columns: 1fr;
+  }
+  .attachment-page img {
+    height: 250px;
+  }
+  .form-section .row {
+    gap: 5px 12px;
+  }
+  .checkbox-label {
+    font-size: 11px;
+  }
+  .editor-panel > .button {
+    margin-bottom: 20px;
+  }
+  .question-checkbox {
+    font-size: 12px;
+  }
+}
+.grid-two > *,
+.grid-three > * {
+  min-width: 0;
+}
+.exam-controls > .row .button {
+  white-space: normal;
+  line-height: 1.5;
+  min-width: 0;
+}
+.option > span {
+  overflow-wrap: anywhere;
+}
+.option-editor > input:nth-child(2) {
+  min-width: 0;
+}
+.checkbox-label {
+  overflow-wrap: anywhere;
 }

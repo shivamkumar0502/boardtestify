@@ -29,6 +29,7 @@ export function accessToken(user) {
 }
 export async function auth(req, _, next) {
   try {
+    if (req.user) return next();
     const t = req.headers.authorization?.replace(/^Bearer /, "");
     assert(t, 401, "Please sign in");
     let payload;
@@ -70,4 +71,7 @@ export const publicUser = (u) => ({
   role: u.role,
   classLevel: u.classLevel,
   stream: u.stream,
+  phone: u.phone,
+  phoneVerified: !!u.phoneVerifiedAt,
+  language: u.language || "en",
 });

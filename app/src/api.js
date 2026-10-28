@@ -20,12 +20,27 @@ export async function restore() {
       await raw("/auth/mobile-refresh", { refreshToken: token }),
     );
     return true;
-  } catch {
-    access = null;
-    user = null;
-    await SecureStore.deleteItemAsync("bt-refresh");
+  } catch (e) {
+    if (e.status === 401 || e.status === 400) {
+      access = null;
+      user = null;
+      await SecureStore.deleteItemAsync("bt-refresh");
+    }
     return false;
   }
+}
+export async function uploadFile(path, file, fields) {
+  try {
+    return await raw.upload(path, file, fields);
+  } catch (e) {
+    if (e.status === 401 && (await restore()))
+      return raw.upload(path, file, fields);
+    throw e;
+  }
+}
+export async function updateProfile(data) {
+  user = await api("/auth/me", data, "PATCH");
+  return user;
 }
 export async function login(email, password) {
   await saveSession(await raw("/auth/mobile-login", { email, password }));
@@ -46,7 +61,17 @@ export async function api(path, body, method) {
   try {
     return await raw(path, body, method);
   } catch (e) {
-    if (e.status === 401 && !path.startsWith("/auth")) {
+    if (
+      e.status === 401 &&
+      ![
+        "/auth/login",
+        "/auth/register",
+        "/auth/refresh",
+        "/auth/mobile-login",
+        "/auth/mobile-refresh",
+        "/auth/mobile-logout",
+      ].includes(path)
+    ) {
       refreshing ??= restore()
         .then((ok) => {
           if (!ok) throw Error("Session expired. Please sign in again.");
