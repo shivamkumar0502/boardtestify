@@ -620,7 +620,7 @@ export function Exam() {
                 <label className="button ghost upload-picker">
                   <span>{tr("Choose photo / file")}</span>
                   <input
-                    aria-label={tr("Choose answer sheet photo or file")}
+                    aria-label={tr("Upload answer sheet")}
                     type="file"
                     accept={
                       features.data?.pdfSheets
