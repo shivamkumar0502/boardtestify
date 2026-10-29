@@ -27,6 +27,8 @@ export function Performance() {
   const [busy, setBusy] = useState(true);
   const [planBusy, setPlanBusy] = useState(false);
   const [plan, setPlan] = useState(null);
+  const [completedTasks, setCompletedTasks] = useState([]);
+  const [taskBusy, setTaskBusy] = useState("");
   const [planError, setPlanError] = useState("");
   const [mistakes, setMistakes] = useState([]);
   const [mistakesError, setMistakesError] = useState("");
@@ -46,13 +48,35 @@ export function Performance() {
   useEffect(() => {
     void load();
     request("/analytics/mistakes").then(setMistakes).catch((e) => setMistakesError(e.message || "Could not load mistake review"));
+    request("/study-plan/current").then((saved) => {
+      setPlan(saved.plan || null);
+      setCompletedTasks(saved.completedTasks || []);
+    }).catch(() => {});
   }, []);
+
+  const planTaskKey = (day, index) => `day:${day}:task:${index}`;
+
+  async function togglePlanTask(day, taskIndex, completed) {
+    const key = planTaskKey(day, taskIndex);
+    setTaskBusy(key);
+    setPlanError("");
+    try {
+      const result = await request("/study-plan/task", { day, taskIndex, completed }, "PATCH");
+      setCompletedTasks(result.completedTasks || []);
+    } catch (e) {
+      setPlanError(e.message || "Could not save task progress");
+    } finally {
+      setTaskBusy("");
+    }
+  }
 
   async function generatePlan() {
     setPlanBusy(true);
     setPlanError("");
     try {
-      setPlan(await request("/study-plan", { language }, "POST"));
+      const generated = await request("/study-plan", { language }, "POST");
+      setPlan(generated);
+      setCompletedTasks(generated.completedTasks || []);
     } catch (e) {
       setPlanError(e.message || "Could not generate your study plan");
     } finally {
@@ -201,6 +225,15 @@ export function Performance() {
             <h3>{plan.title}</h3>
             <p>{plan.summary}</p>
           </div>
+          <div className="plan-progress" aria-label={tr("Revision plan progress")}>
+            <div className="row between">
+              <strong>{tr("Your progress")}</strong>
+              <span>{completedTasks.length}/{plan.days.reduce((sum, day) => sum + day.tasks.length, 0)} {tr("tasks complete")}</span>
+            </div>
+            <div className="plan-progress-track" role="img" aria-label={`${Math.round(completedTasks.length / Math.max(1, plan.days.reduce((sum, day) => sum + day.tasks.length, 0)) * 100)}%`}>
+              <span style={{ width: `${Math.min(100, completedTasks.length / Math.max(1, plan.days.reduce((sum, day) => sum + day.tasks.length, 0)) * 100)}%` }} />
+            </div>
+          </div>
           <div className="study-plan-days">
             {plan.days.map((day) => <article className="study-day" key={day.day}>
               <div className="study-day-heading">
@@ -216,7 +249,18 @@ export function Performance() {
                     REVIEW_MISTAKES: "Review mistakes",
                     RETAKE_TEST: "Retake a short test",
                   }[task.activity] || "Study session";
-                  return <div className="study-task" key={`${day.day}-${index}`}>
+                  const taskKey = planTaskKey(day.day, index);
+                  const isDone = completedTasks.includes(taskKey);
+                  return <div className={`study-task ${isDone ? "is-complete" : ""}`} key={`${day.day}-${index}`}>
+                    <label className="study-task-check">
+                      <input
+                        type="checkbox"
+                        checked={isDone}
+                        disabled={taskBusy === taskKey}
+                        onChange={(event) => void togglePlanTask(day.day, index, event.target.checked)}
+                      />
+                      <span>{tr(isDone ? "Completed" : "Mark task complete")}</span>
+                    </label>
                     <div className="row between">
                       <strong>{tr(activity)}</strong>
                       <span className="study-duration"><Clock3 size={14} /> {task.durationMinutes} {tr("min")}</span>
