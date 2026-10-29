@@ -31,6 +31,7 @@ import {
 import { api, request, setToken } from "./api";
 import { Exam, Result } from "./test";
 import { Admin } from "./admin";
+import { Performance } from "./performance";
 import {
   AnnouncementsFeed,
   ResourceLibrary,
@@ -711,6 +712,7 @@ function Shell() {
                 lang === "hi" ? "मेरे टेस्ट" : "My attempts",
               ],
               [ChartNoAxesCombined, "/app/progress", "My progress"],
+              [ChartNoAxesCombined, "/app/performance", "Performance analytics"],
               [GraduationCap, "/app/profile", "Profile & pass"],
               ...(user.role !== "STUDENT"
                 ? [[Shield, "/app/admin", "Administration"]]
@@ -779,6 +781,7 @@ function Shell() {
             <Route path="resources" element={<ResourceLibrary />} />
             <Route path="attempts" element={<Attempts />} />
             <Route path="progress" element={<Progress />} />
+            <Route path="performance" element={<Performance />} />
             <Route path="profile" element={<Profile />} />
             <Route path="admin/*" element={<Admin />} />
           </Routes>
