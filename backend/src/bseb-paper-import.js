@@ -11,6 +11,7 @@ import { auth, allow, assert, hash } from "./lib.js";
 import { bsebSubjects } from "./bseb-catalog.js";
 import { modelJSON } from "./evaluation.js";
 import { env } from "./config.js";
+import { validateBsebDraft } from "./bseb-validation.js";
 import { sharedLimit, concurrencyGate } from "./reliability.js";
 
 const run = promisify(execFile);
@@ -261,6 +262,8 @@ bsebPaperImport.post("/admin/bseb-papers/import", async (req, res) => {
     }
   }
   assert(questions.length > 0, 422, "No complete questions could be extracted. Use the manual text/photo importer or a selectable-text PDF.");
+  const validation = validateBsebDraft({ questions, source });
+  warnings.push(...validation.warnings);
   const questionRows = questions.map((entry, index) => ({
     _id: hash(`${testKey}:question:${index}:${entry.data.text}`).slice(0, 24),
     hash: hash(`${testKey}:question:${index}:${entry.data.text}`),
@@ -302,7 +305,7 @@ bsebPaperImport.post("/admin/bseb-papers/import", async (req, res) => {
     actor: String(req.user._id),
     action: "BSEB_OFFICIAL_PDF_CBT_DRAFT",
     entityId: testId,
-    details: { subjectKey: source.key, sourceYear: 2026, questionCount: questionRows.length, pageCount: visionPages.length || pages.length, extractionMethod: visionPages.length ? "scanned-page-vision" : "selectable-text", warnings: warnings.length },
+    details: { subjectKey: source.key, sourceYear: 2026, questionCount: questionRows.length, pageCount: visionPages.length || pages.length, extractionMethod: visionPages.length ? "scanned-page-vision" : "selectable-text", validationStatus: validation.status, countDifference: validation.countDifference, warnings: warnings.length },
   });
   res.status(201).json({
     testId,
@@ -313,6 +316,7 @@ bsebPaperImport.post("/admin/bseb-papers/import", async (req, res) => {
     sourceUrl: source.sourceUrl,
     pageCount: visionPages.length || pages.length,
     extractionMethod: visionPages.length ? "scanned-page-vision" : "selectable-text",
+    validation,
     warnings: [...new Set(warnings)].slice(0, 30),
     message: "CBT draft created. Review all extracted questions and suggested keys in Administration before publishing.",
   });
