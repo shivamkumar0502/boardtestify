@@ -166,7 +166,7 @@ bsebPaperImport.post("/admin/bseb-papers/import", async (req, res) => {
       const options = q.options.map((o, i) => ({ ...o, id: String(o.id || String.fromCharCode(97 + i)).toLowerCase() }));
       const questionType = q.type;
       const marks = q.maximumMarks;
-      let correct = q.correct;
+      let correct = q.correct.map((key) => String(key).toLowerCase());
       let referenceAnswer = q.referenceAnswer;
       let rubric = q.rubric;
       if (questionType === "SINGLE_CHOICE" || questionType === "MULTIPLE_CHOICE") {
@@ -247,7 +247,7 @@ bsebPaperImport.post("/admin/bseb-papers/import", async (req, res) => {
   });
   await TestModel.updateOne(
     { _id: testId },
-    { $set: { data: testData, status: "DRAFT", version: 1, creator: String(req.user._id) } },
+    { $setOnInsert: { data: testData, status: "DRAFT", version: 1, creator: String(req.user._id) } },
     { upsert: true },
   );
   await Audit.create({
