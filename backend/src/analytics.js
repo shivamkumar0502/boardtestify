@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { Attempt, Academic } from "./models.js";
+import { Attempt, Academic, StudyPlan } from "./models.js";
 import { auth, HttpError } from "./lib.js";
 import { modelJSON } from "./evaluation.js";
 
@@ -223,6 +223,34 @@ const studyPlanSchema = z.object({
   })).length(7),
 });
 
+analytics.get("/study-plan/current", async (req, res) => {
+  const saved = await StudyPlan.findOne({ userId: String(req.user._id) }).lean();
+  res.json({
+    plan: saved?.plan || null,
+    completedTasks: saved?.completedTasks || [],
+    generatedAt: saved?.generatedAt || null,
+  });
+});
+
+analytics.patch("/study-plan/task", async (req, res) => {
+  const input = z.object({
+    day: z.number().int().min(1).max(7),
+    taskIndex: z.number().int().min(0).max(2),
+    completed: z.boolean(),
+  }).parse(req.body);
+  const userId = String(req.user._id);
+  const saved = await StudyPlan.findOne({ userId });
+  if (!saved?.plan?.days) throw new HttpError(404, "Generate a study plan first");
+  const day = saved.plan.days.find((row) => row.day === input.day);
+  if (!day?.tasks?.[input.taskIndex]) throw new HttpError(404, "Study task not found");
+  const key = `day:${input.day}:task:${input.taskIndex}`;
+  const update = input.completed
+    ? { $addToSet: { completedTasks: key } }
+    : { $pull: { completedTasks: key } };
+  const updated = await StudyPlan.findOneAndUpdate({ userId }, update, { new: true }).lean();
+  res.json({ completedTasks: updated?.completedTasks || [] });
+});
+
 analytics.post("/study-plan", async (req, res) => {
   const language = req.body?.language === "hi" ? "hi" : "en";
   const rows = await Attempt.find({
@@ -326,7 +354,7 @@ analytics.post("/study-plan", async (req, res) => {
     throw new HttpError(502, "AI study plan referenced an unknown learning area");
   }
   plan.days.sort((a, b) => a.day - b.day);
-  res.json({
+  const savedPlan = {
     ...plan,
     evidence: areas.map(({ id, subject, area, percent, questions }) => ({
       id, subject, area, percent, evaluatedQuestions: questions,
@@ -334,7 +362,13 @@ analytics.post("/study-plan", async (req, res) => {
     disclaimer: language === "hi"
       ? "यह योजना आपके उपलब्ध मूल्यांकित उत्तरों पर आधारित अध्ययन-सुझाव है, आधिकारिक पाठ्यक्रम या बोर्ड परिणाम की भविष्यवाणी नहीं।"
       : "This plan uses your available evaluated answers as study guidance; it is not an official syllabus or a predicted board result.",
-  });
+  };
+  await StudyPlan.findOneAndUpdate(
+    { userId: String(req.user._id) },
+    { $set: { plan: savedPlan, language, generatedAt: new Date(), completedTasks: [] } },
+    { upsert: true, new: true, setDefaultsOnInsert: true },
+  );
+  res.json({ ...savedPlan, completedTasks: [] });
 });
 
 

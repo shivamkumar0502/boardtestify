@@ -125,6 +125,17 @@ export const Attempt = make(
     [{ userId: 1, status: 1, submittedAt: -1 }, {}],
   ],
 );
+export const StudyPlan = make(
+  "StudyPlan",
+  {
+    userId: { type: String, unique: true },
+    plan: Schema.Types.Mixed,
+    completedTasks: { type: [String], default: [] },
+    language: { type: String, enum: ["hi", "en"], default: "en" },
+    generatedAt: Date,
+  },
+  [[{ userId: 1 }, { unique: true }]],
+);
 export const Audit = make("Audit", {
   actor: String,
   action: String,
@@ -285,6 +296,7 @@ const indexedModels = [
   QuestionModel,
   TestModel,
   Attempt,
+  StudyPlan,
   Payment,
   RateBucket,
   Announcement,
