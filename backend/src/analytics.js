@@ -137,7 +137,46 @@ analytics.get("/analytics/detailed", async (req, res) => {
     .sort((a, b) => (a.percent ?? 101) - (b.percent ?? 101))
     .slice(0, 12);
 
+  const dayKey = (date) => new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+  const activeDays = new Set(
+    rows
+      .map((attempt) => attempt.submittedAt || attempt.createdAt || attempt.startedAt)
+      .filter(Boolean)
+      .map((date) => dayKey(new Date(date))),
+  );
+  const today = dayKey(new Date());
+  const shiftDay = (key, amount) => {
+    const [year, month, day] = key.split("-").map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day + amount, 12));
+    return date.toISOString().slice(0, 10);
+  };
+  let currentStreak = 0;
+  let cursor = activeDays.has(today) ? today : shiftDay(today, -1);
+  while (activeDays.has(cursor)) {
+    currentStreak += 1;
+    cursor = shiftDay(cursor, -1);
+  }
+  let longestStreak = 0;
+  let run = 0;
+  const orderedDays = [...activeDays].sort();
+  let previous = null;
+  for (const day of orderedDays) {
+    run = previous && shiftDay(previous, 1) === day ? run + 1 : 1;
+    longestStreak = Math.max(longestStreak, run);
+    previous = day;
+  }
+  const lastSevenDays = Array.from({ length: 7 }, (_, index) => {
+    const date = shiftDay(today, index - 6);
+    return { date, active: activeDays.has(date) };
+  });
+
   res.json({
+    streak: { current: currentStreak, longest: longestStreak, activeDays: lastSevenDays },
     completed,
     finalized,
     averagePercent: finalized ? Math.round(finalizedPercentTotal / finalized) : null,
