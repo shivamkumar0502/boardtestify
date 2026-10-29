@@ -132,7 +132,7 @@ bsebPaperImport.post("/admin/bseb-papers/import", async (req, res) => {
   const chunks = [];
   let current = "";
   for (let i = 0; i < pages.length; i++) {
-    const pageBlock = `[SOURCE PAGE ${i + 1}]\n${pages[i]}\n`;
+    const pageBlock = `[SOURCE PAGE ${pages[i].number}]\n${pages[i].text}\n`;
     if (current && current.length + pageBlock.length > 9000) {
       chunks.push(current);
       current = "";
