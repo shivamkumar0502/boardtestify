@@ -101,3 +101,15 @@
   .mistake-meta { flex-direction: column; }
   .mistake-card .button { width: 100%; justify-content: center; }
 }
+
+
+.plan-progress { display: grid; gap: 9px; margin: 18px 0; }
+.plan-progress .row { gap: 12px; flex-wrap: wrap; }
+.plan-progress .row span { color: var(--muted); font-size: 13px; }
+.plan-progress-track { height: 8px; border-radius: 999px; overflow: hidden; background: var(--line); }
+.plan-progress-track > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width .2s ease; }
+.study-task-check { display: flex; align-items: center; gap: 8px; width: fit-content; max-width: 100%; font-size: 12px; color: var(--muted); cursor: pointer; }
+.study-task-check input { width: 17px; height: 17px; accent-color: var(--accent); flex: 0 0 auto; }
+.study-task.is-complete { border-color: rgba(70, 180, 120, .45); background: rgba(70, 180, 120, .05); }
+.study-task.is-complete > p { text-decoration: line-through; text-decoration-color: var(--muted); }
+@media (max-width: 520px) { .plan-progress .row { align-items: flex-start; } .study-task-check { min-height: 30px; } }
