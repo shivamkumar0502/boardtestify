@@ -59,6 +59,12 @@ test("analytics returns current, longest and seven-day streak using India time",
       data.streak.activeDays.map((day) => day.active),
       [false, true, false, false, false, true, true],
     );
+    const mistakesResponse = await fetch(
+      `http://127.0.0.1:${server.address().port}/api/analytics/mistakes`,
+      { headers: { Authorization: `Bearer ${accessToken(user)}` } },
+    );
+    assert.equal(mistakesResponse.status, 200);
+    assert.deepEqual(await mistakesResponse.json(), []);
   } finally {
     if (server) await new Promise((resolve) => server.close(resolve));
     await mongoose.disconnect();
