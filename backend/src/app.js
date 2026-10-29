@@ -1,4 +1,5 @@
 import { bsebSetup } from "./bseb-setup.js";
+import { bsebPaperImport } from "./bseb-paper-import.js";
 import { packRoutes } from "./pack-routes.js";
 import { series } from "./series.js";
 import { authoring } from "./authoring-routes.js";
