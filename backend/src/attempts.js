@@ -613,12 +613,23 @@ export function summaryFor(a, evaluations = a.evaluations) {
       qs.slice(0, section.maxAnswers ?? qs.length).reduce((x, y) => x + y, 0)
     );
   }, 0);
+  const awardedMarks = values
+    .filter((e) => e.status === "EVALUATED")
+    .reduce((s, e) => s + e.awardedMarks, 0);
+  const minimumPassingMarks = Number.isFinite(a.snapshot.minimumPassingMarks)
+    ? a.snapshot.minimumPassingMarks
+    : null;
   return {
     provisional: pending,
-    awardedMarks: values
-      .filter((e) => e.status === "EVALUATED")
-      .reduce((s, e) => s + e.awardedMarks, 0),
+    awardedMarks,
     maximumMarks: max,
+    minimumPassingMarks,
+    passStatus:
+      !pending && minimumPassingMarks !== null
+        ? awardedMarks >= minimumPassingMarks
+          ? "PASS"
+          : "NOT_PASSED"
+        : null,
     answeredCount: Object.values(a.answers || {}).filter(answerPresent).length,
   };
 }

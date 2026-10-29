@@ -14,6 +14,11 @@ export function PaperGuide({ paper }) {
             "Offered questions include internal choices.",
         )}
       </p>
+      {paper.minimumPassingMarks != null && (
+        <p className="small muted">
+          {tr("Minimum passing marks in this approved pattern")}: {paper.minimumPassingMarks}
+        </p>
+      )}
       {paper.durationMinutes != null && (
         <p className="small muted">
           {tr("Writing time")}:{" "}

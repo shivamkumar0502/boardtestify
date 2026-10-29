@@ -42,6 +42,7 @@ export const questionSchema = z
       "SHORT_ANSWER",
       "LONG_ANSWER",
       "NUMERICAL",
+      "IMAGE_BASED",
     ]),
     language: z.enum(["hi", "en"]),
     text,
@@ -79,16 +80,17 @@ export const questionSchema = z
       issue("Negative marks exceed maximum");
     if (new Set(q.options.map((o) => o.id)).size !== q.options.length)
       issue("Option IDs must be unique");
-    if (q.type.endsWith("CHOICE")) {
+    if (q.type.endsWith("CHOICE") || q.type === "IMAGE_BASED") {
       if (
         q.options.length < 2 ||
         !q.correct.length ||
         q.correct.some((x) => !q.options.some((o) => o.id === x))
       )
         issue("Valid options and answer key required");
-      if (q.type === "SINGLE_CHOICE" && q.correct.length !== 1)
+      if ((q.type === "SINGLE_CHOICE" || q.type === "IMAGE_BASED") && q.correct.length !== 1)
         issue("Single choice needs one answer");
     }
+    if (q.type === "IMAGE_BASED" && !q.imageKey) issue("Image-based questions require an image");
     if (q.type === "NUMERICAL" && !q.correct.length)
       issue("Accepted numerical answers required");
     if (isDescriptive(q.type)) {
@@ -160,6 +162,7 @@ export const testSchema = z
                 "SHORT_ANSWER",
                 "LONG_ANSWER",
                 "NUMERICAL",
+                "IMAGE_BASED",
               ]),
             )
             .min(1)
@@ -328,6 +331,7 @@ export const patternSchema = z
     durationMinutes: z.number().int().min(1).max(360),
     readingMinutes: z.number().int().min(0).max(30).default(0),
     totalMarks: z.number().positive().max(1000),
+    minimumPassingMarks: z.number().min(0).max(1000).optional(),
     sections: z
       .array(
         z.object({
@@ -346,6 +350,7 @@ export const patternSchema = z
                 "SHORT_ANSWER",
                 "LONG_ANSWER",
                 "NUMERICAL",
+                "IMAGE_BASED",
               ]),
             )
             .min(1),
@@ -356,6 +361,8 @@ export const patternSchema = z
       .max(10),
   })
   .superRefine((p, c) => {
+    if (p.minimumPassingMarks !== undefined && p.minimumPassingMarks > p.totalMarks)
+      c.addIssue({ code: "custom", message: "Minimum passing marks cannot exceed total marks" });
     if (
       p.sections.some((s) => s.answerCount > s.offered) ||
       p.sections.reduce((n, s) => n + s.offered, 0) > 200

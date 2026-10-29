@@ -423,6 +423,7 @@ const blank = {
   durationMinutes: 195,
   readingMinutes: 15,
   totalMarks: 100,
+  minimumPassingMarks: undefined,
   sections: [
     {
       id: "objective",
@@ -540,6 +541,19 @@ function Patterns() {
                 type="number"
                 value={draft.totalMarks}
                 onChange={(e) => set("totalMarks", Number(e.target.value))}
+              />
+            </label>
+            <label>
+              {tr("Minimum passing marks (optional)")}
+              <input
+                type="number"
+                min="0"
+                max={draft.totalMarks}
+                value={draft.minimumPassingMarks ?? ""}
+                onChange={(e) =>
+                  set("minimumPassingMarks", e.target.value === "" ? undefined : Number(e.target.value))
+                }
+                placeholder={tr("Only enter a verified threshold")}
               />
             </label>
             <label>

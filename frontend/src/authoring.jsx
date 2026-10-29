@@ -9,6 +9,7 @@ export const types = [
   "SHORT_ANSWER",
   "LONG_ANSWER",
   "NUMERICAL",
+  "IMAGE_BASED",
 ];
 export const typeLabels = {
   SINGLE_CHOICE: "Single-choice MCQ",
@@ -16,6 +17,7 @@ export const typeLabels = {
   SHORT_ANSWER: "Short answer",
   LONG_ANSWER: "Long answer",
   NUMERICAL: "Numerical answer",
+  IMAGE_BASED: "Image-based MCQ",
 };
 export function AcademicPicker({
   value,
@@ -351,9 +353,16 @@ export function QuestionForm({ value: q, onChange, hideAcademic = false }) {
                 ...q,
                 type,
                 correct:
-                  type === "SINGLE_CHOICE"
+                  ["SINGLE_CHOICE", "IMAGE_BASED"].includes(type)
                     ? (q.correct || []).slice(0, 1)
                     : q.correct,
+                options:
+                  type === "IMAGE_BASED" && (q.options || []).length < 2
+                    ? [
+                        ...(q.options || []),
+                        ...Array.from({ length: 2 - (q.options || []).length }, (_, i) => ({ id: `img${Date.now().toString(36).slice(-5)}${i}`, text: `Option ${(q.options || []).length + i + 1}` })),
+                      ]
+                    : q.options,
                 rubric:
                   ["SHORT_ANSWER", "LONG_ANSWER"].includes(type) &&
                   !q.rubric?.length
@@ -475,7 +484,7 @@ export function QuestionForm({ value: q, onChange, hideAcademic = false }) {
           </select>
         </label>
       </div>
-      {q.type.endsWith("CHOICE") && (
+      {(q.type.endsWith("CHOICE") || q.type === "IMAGE_BASED") && (
         <div className="form-section">
           <h3>{tr("Answer options")}</h3>
           <p className="small muted">
@@ -486,13 +495,13 @@ export function QuestionForm({ value: q, onChange, hideAcademic = false }) {
               <div className="option-editor" key={o.id}>
                 <input
                   aria-label={tr("Correct option {0}", [i + 1])}
-                  type={q.type === "SINGLE_CHOICE" ? "radio" : "checkbox"}
+                  type={["SINGLE_CHOICE", "IMAGE_BASED"].includes(q.type) ? "radio" : "checkbox"}
                   name="answer-key"
                   checked={(q.correct || []).includes(o.id)}
                   onChange={() =>
                     set(
                       "correct",
-                      q.type === "SINGLE_CHOICE"
+                      ["SINGLE_CHOICE", "IMAGE_BASED"].includes(q.type)
                         ? [o.id]
                         : (q.correct || []).includes(o.id)
                           ? q.correct.filter((v) => v !== o.id)
