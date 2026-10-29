@@ -510,7 +510,7 @@ export function Exam() {
             disabled={conflict || remaining === 0 || readingLeft > 0}
           >
             <legend className="sr-only">{tr("Your answer")}</legend>
-            {q.type.endsWith("CHOICE") ? (
+            {q.type.endsWith("CHOICE") || q.type === "IMAGE_BASED" ? (
               <div className="options">
                 {tr(
                   q.options.map((o, i) => {
@@ -524,13 +524,13 @@ export function Exam() {
                       >
                         <input
                           type={
-                            q.type === "SINGLE_CHOICE" ? "radio" : "checkbox"
+                            ["SINGLE_CHOICE", "IMAGE_BASED"].includes(q.type) ? "radio" : "checkbox"
                           }
                           name={q._id}
                           checked={values.includes(o.id)}
                           onChange={() =>
                             change(
-                              q.type === "SINGLE_CHOICE"
+                              ["SINGLE_CHOICE", "IMAGE_BASED"].includes(q.type)
                                 ? [o.id]
                                 : values.includes(o.id)
                                   ? values.filter((v) => v !== o.id)
