@@ -224,7 +224,10 @@ function ContentEditor({ kind, onImportSource }) {
   return (
     <>
       {kind === "tests" && ["ADMIN", "SUPER_ADMIN"].includes(user.role) && (
-        <PracticePackImporter onImported={reload} />
+        <>
+          <OfficialPaperImporter onImported={reload} />
+          <PracticePackImporter onImported={reload} />
+        </>
       )}
       <div className="toolbar">
         <div>
@@ -1031,6 +1034,110 @@ function Audit() {
         )),
       )}
     </div>
+  );
+}
+
+
+function OfficialPaperImporter({ onImported }) {
+  useLanguage();
+  const [classLevel, setClassLevel] = useState("10");
+  const [stream, setStream] = useState("GENERAL");
+  const [session, setSession] = useState("2025-26");
+  const [subjectKey, setSubjectKey] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState(null);
+  const query = new URLSearchParams({ classLevel, stream }).toString();
+  const { data: subjects, error: catalogError } = useLoad(`/admin/bseb-papers/catalog?${query}`);
+  async function importPaper() {
+    if (!subjectKey) {
+      setError("Choose a subject first.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    setResult(null);
+    try {
+      const draft = await request("/admin/bseb-papers/import", {
+        subjectKey,
+        session,
+        classLevel,
+        stream,
+        language: "en",
+      }, "POST");
+      setResult(draft);
+      onImported();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section className="panel" aria-label={tr("Official BSEB PDF to CBT importer")}>
+      <h2>{tr("Convert official BSEB PDF to CBT draft")}</h2>
+      <p className="muted small">
+        {tr("Downloads a selectable-text official 2026 model-paper PDF, extracts questions with AI, and saves a timed CBT draft. Answer keys, wording, marks, internal choices and rubrics remain unverified until reviewed. Scanned PDFs are not supported by this importer yet.")}
+      </p>
+      <div className="grid-three">
+        <label>
+          {tr("Class")}
+          <select value={classLevel} disabled={busy} onChange={(e) => {
+            const next = e.target.value;
+            setClassLevel(next);
+            setStream(next === "10" ? "GENERAL" : "SCIENCE");
+            setSubjectKey("");
+            setResult(null);
+          }}>
+            <option value="10">{tr("Class 10")}</option>
+            <option value="12">{tr("Class 12")}</option>
+          </select>
+        </label>
+        <label>
+          {tr("Stream")}
+          <select value={stream} disabled={busy || classLevel === "10"} onChange={(e) => {
+            setStream(e.target.value);
+            setSubjectKey("");
+            setResult(null);
+          }}>
+            {(classLevel === "10" ? ["GENERAL"] : ["SCIENCE", "ARTS", "COMMERCE"]).map((s) => (
+              <option key={s} value={s}>{tr(s)}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          {tr("Academic session")}
+          <input value={session} disabled={busy} placeholder="2025-26" onChange={(e) => setSession(e.target.value)} />
+        </label>
+        <label>
+          {tr("Official 2026 paper")}
+          <select value={subjectKey} disabled={busy} onChange={(e) => setSubjectKey(e.target.value)}>
+            <option value="">{tr("Choose a subject")}</option>
+            {(subjects || []).map((s) => (
+              <option key={s.key} value={s.key}>{s.name} · {s.theoryMarks ?? "marks n/a"} marks</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <Notice error>{error || catalogError}</Notice>
+      <button className="button primary" disabled={busy || !subjectKey || !/^\d{4}-\d{2}$/.test(session)} onClick={importPaper}>
+        {busy ? tr("Extracting paper with AI…") : tr("Create CBT draft from official PDF")}
+      </button>
+      {result && (
+        <div className="panel question-preview">
+          <h3>{tr(result.title)}</h3>
+          <p>{tr("Created as {0}; {1} questions extracted from {2} PDF pages.", [result.status, result.questions, result.pageCount])}</p>
+          <p className="muted small">{tr("Source: ")}<a href={result.sourceUrl} target="_blank" rel="noreferrer">{result.sourceUrl}</a></p>
+          <Notice>{tr(result.message)}</Notice>
+          {!!result.warnings?.length && (
+            <details>
+              <summary>{tr("Review warnings ({0})", [result.warnings.length])}</summary>
+              <ul>{result.warnings.map((warning, i) => <li key={i}>{tr(warning)}</li>)}</ul>
+            </details>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 
