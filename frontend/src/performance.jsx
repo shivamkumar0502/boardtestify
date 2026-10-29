@@ -27,7 +27,7 @@ export function Performance() {
   const [busy, setBusy] = useState(true);
   const [planBusy, setPlanBusy] = useState(false);
   const [plan, setPlan] = useState(null);
-  const [planError, setPlanError] = useState("");
+  const [planError, setPlanError] = useState("");\n  const [mistakes, setMistakes] = useState([]);\n  const [mistakesError, setMistakesError] = useState("");
 
   async function load() {
     setBusy(true);
@@ -41,7 +41,7 @@ export function Performance() {
     }
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {\n    void load();\n    request("/analytics/mistakes").then(setMistakes).catch((e) => setMistakesError(e.message || "Could not load mistake review"));\n  }, []);
 
   async function generatePlan() {
     setPlanBusy(true);
@@ -147,6 +147,36 @@ export function Performance() {
           <Link className="button ghost" to="/app/tests">{tr("Find practice tests")} →</Link>
         </section>
       </div>
+
+      <section className="panel mistakes-panel">
+        <div>
+          <span className="eyebrow">{tr("LEARN FROM EVERY ATTEMPT")}</span>
+          <h2>{tr("Mistake review")}</h2>
+          <p className="muted">{tr("Revisit evaluated answers that missed full marks, with explanations and feedback from your saved attempts.")}</p>
+        </div>
+        {mistakesError && <div className="notice error" role="alert">{tr(mistakesError)}</div>}
+        {!mistakes.length ? <p className="muted">{tr("No finalized mistakes to review yet. Submit and finalize a test to build your review list.")}</p> :
+          <div className="mistake-list">
+            {mistakes.map((mistake) => <article className="mistake-card" key={`${mistake.attemptId}-${mistake.id}`}>
+              <div className="row between mistake-meta">
+                <span className="tag">{tr(mistake.subject)} · {tr(mistake.chapter)}</span>
+                <strong className="mistake-marks">{mistake.awardedMarks}/{mistake.maximumMarks} {tr("marks")}</strong>
+              </div>
+              <h3>{mistake.text}</h3>
+              <small className="muted">{tr(mistake.title)} · {mistake.date ? new Date(mistake.date).toLocaleDateString() : "—"}</small>
+              {mistake.feedback && <p>{mistake.feedback}</p>}
+              {mistake.missingPoints?.length > 0 && <div><strong>{tr("Missing points")}</strong><ul>{mistake.missingPoints.map((point, i) => <li key={i}>{point}</li>)}</ul></div>}
+              {mistake.improvementAdvice?.length > 0 && <div><strong>{tr("How to improve")}</strong><ul>{mistake.improvementAdvice.map((tip, i) => <li key={i}>{tip}</li>)}</ul></div>}
+              <details>
+                <summary>{tr("Show reference answer and explanation")}</summary>
+                {mistake.referenceAnswer && <div className="mistake-reference"><strong>{tr("Reference answer")}</strong><p>{mistake.referenceAnswer}</p></div>}
+                {mistake.explanation && <div className="mistake-reference"><strong>{tr("Explanation")}</strong><p>{mistake.explanation}</p></div>}
+              </details>
+              <Link className="button ghost" to={`/result/${mistake.attemptId}`}>{tr("Open result")} →</Link>
+            </article>)}
+          </div>
+        }
+      </section>
 
       <section className="panel study-plan-panel">
         <div className="row between">
