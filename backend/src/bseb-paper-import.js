@@ -93,6 +93,21 @@ bsebPaperImport.post("/admin/bseb-papers/import", async (req, res) => {
   }).lean();
   assert(academicRow, 400, "Set up BSEB subjects for this session first from Administration → Academics");
   assert(source.durationMinutes, 400, "This subject has no verified duration in the catalog");
+  const testKey = `bseb-cbt-draft:${source.key}:${input.session}:2026`;
+  const testId = hash(testKey).slice(0, 24);
+  const existingTest = await TestModel.findById(testId).lean();
+  if (existingTest) {
+    return res.json({
+      testId,
+      status: existingTest.status,
+      mode: existingTest.data?.mode || "CBT",
+      title: existingTest.data?.title || `${source.name} · BSEB 2026 full-paper CBT draft`,
+      questions: existingTest.data?.sections?.reduce((n, section) => n + section.questionIds.length, 0) || 0,
+      sourceUrl: source.sourceUrl,
+      message: "A draft for this subject/session already exists. Reuse and review it; it was not overwritten.",
+      warnings: ["Existing draft was preserved to protect reviewer edits."],
+    });
+  }
 
   let response;
   try {
@@ -211,8 +226,6 @@ bsebPaperImport.post("/admin/bseb-papers/import", async (req, res) => {
     }
   }
   assert(questions.length > 0, 422, "No complete questions could be extracted. Use the manual text/photo importer or a selectable-text PDF.");
-  const testKey = `bseb-cbt-draft:${source.key}:${input.session}:2026`;
-  const testId = hash(testKey).slice(0, 24);
   const questionRows = questions.map((entry, index) => ({
     _id: hash(`${testKey}:question:${index}:${entry.data.text}`).slice(0, 24),
     hash: hash(`${testKey}:question:${index}:${entry.data.text}`),
