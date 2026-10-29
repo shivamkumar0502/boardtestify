@@ -336,3 +336,64 @@ analytics.post("/study-plan", async (req, res) => {
       : "This plan uses your available evaluated answers as study guidance; it is not an official syllabus or a predicted board result.",
   });
 });
+
+
+analytics.get("/analytics/mistakes", async (req, res) => {
+  const attempts = await Attempt.find({
+    userId: String(req.user._id),
+    status: { $ne: "ACTIVE" },
+    "summary.provisional": false,
+  })
+    .select("snapshot questions answers evaluations submittedAt createdAt")
+    .sort({ submittedAt: -1, createdAt: -1 })
+    .limit(40)
+    .lean();
+
+  const rows = [];
+  const academicIds = new Set();
+  for (const attempt of attempts) {
+    for (const question of attempt.questions || []) {
+      const evaluation = attempt.evaluations?.[question._id];
+      if (!evaluation || evaluation.status !== "EVALUATED") continue;
+      const maximum = Number(question.maximumMarks) || Number(evaluation.maximumMarks) || 0;
+      const awarded = Number(evaluation.awardedMarks);
+      if (!(maximum > 0) || !Number.isFinite(awarded) || awarded >= maximum) continue;
+      const academic = question.academic || {};
+      if (academic.subjectId) academicIds.add(String(academic.subjectId));
+      if (academic.chapterId) academicIds.add(String(academic.chapterId));
+      rows.push({
+        id: String(question._id),
+        attemptId: String(attempt._id),
+        title: label(attempt.snapshot?.title, "BoardTestify test"),
+        date: attempt.submittedAt || attempt.createdAt,
+        text: label(question.text, "Question"),
+        type: question.type,
+        subjectId: String(academic.subjectId || ""),
+        chapterId: String(academic.chapterId || ""),
+        topic: label(academic.topic, ""),
+        answer: attempt.answers?.[question._id]?.value ?? null,
+        referenceAnswer: label(question.referenceAnswer, ""),
+        explanation: label(question.explanation, ""),
+        awardedMarks: Math.max(0, Math.min(maximum, awarded)),
+        maximumMarks: maximum,
+        feedback: evaluation.feedback || "",
+        missingPoints: Array.isArray(evaluation.missingPoints) ? evaluation.missingPoints : [],
+        improvementAdvice: Array.isArray(evaluation.improvementAdvice) ? evaluation.improvementAdvice : [],
+      });
+    }
+  }
+  const academicRows = academicIds.size
+    ? await Academic.find({
+        _id: { $in: [...academicIds] },
+        classLevel: req.user.classLevel,
+        stream: req.user.stream,
+      }).select("name").lean()
+    : [];
+  const names = new Map(academicRows.map((row) => [String(row._id), row.name]));
+  rows.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  res.json(rows.slice(0, 25).map((row) => ({
+    ...row,
+    subject: names.get(row.subjectId) || "Subject",
+    chapter: names.get(row.chapterId) || row.topic || "Chapter not tagged",
+  })));
+});
