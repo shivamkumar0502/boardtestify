@@ -111,7 +111,7 @@ authoring.post(
   gate,
   async (req, res) => {
     const input = metadata
-      .extend({ text: z.string().trim().min(1).max(20000) })
+      .extend({ text: z.string().trim().min(1).max(100000) })
       .parse(req.body);
     await validateAcademic(input.academic);
     const job = await enqueue(req, input, "TEXT");
@@ -192,8 +192,8 @@ authoring.post(
       const d = z
         .object({
           title: z.string().trim().min(3).max(150),
-          durationMinutes: z.number().int().min(1).max(180),
-          questions: z.array(questionSchema).min(1).max(10),
+          durationMinutes: z.number().int().min(1).max(360),
+          questions: z.array(questionSchema).min(1).max(100),
         })
         .parse(req.body);
       await validateAcademic(job.input.academic);
