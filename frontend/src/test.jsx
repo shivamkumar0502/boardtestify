@@ -278,6 +278,33 @@ export function Exam() {
   }
   async function uploadSheet(file) {
     const target = aRef.current.questions[index];
+    if (!target || !isDescriptive(target.type)) {
+      setError("Photos can only be attached to short or long answer questions.");
+      return;
+    }
+    if (readingLeft > 0) {
+      setError("You can upload answers after the reading period ends.");
+      return;
+    }
+    if (!file) return;
+    const isImage = file.type.startsWith("image/");
+    const isPdf = file.type === "application/pdf";
+    if (!isImage && !isPdf) {
+      setError("Choose an image or PDF answer sheet.");
+      return;
+    }
+    if (isPdf && !features.data?.pdfSheets) {
+      setError("PDF uploads are currently unavailable. Please upload photos instead.");
+      return;
+    }
+    if (isImage && file.size > 5_000_000) {
+      setError("Each photo must be smaller than 5 MB.");
+      return;
+    }
+    if (isPdf && file.size > 10_000_000) {
+      setError("PDF must be smaller than 10 MB.");
+      return;
+    }
     setUploading(true);
     setError("");
     try {
@@ -589,26 +616,51 @@ export function Exam() {
                   "Photos: up to 5 MB. PDF: up to 10 MB. Maximum four attached pages per answer. Save before the exam deadline.",
                 )}
               </p>
-              <input
-                aria-label={tr("Upload answer sheet")}
-                type="file"
-                accept={
-                  features.data?.pdfSheets
-                    ? "image/jpeg,image/png,image/webp,application/pdf"
-                    : "image/jpeg,image/png,image/webp"
-                }
-                disabled={
-                  uploading ||
-                  conflict ||
-                  remaining === 0 ||
-                  readingLeft > 0 ||
-                  (answer?.attachmentIds?.length || 0) >= 4
-                }
-                onChange={(e) => {
-                  if (e.target.files?.[0]) uploadSheet(e.target.files[0]);
-                  e.target.value = "";
-                }}
-              />
+              <div className="answer-upload-actions">
+                <label className="button ghost upload-picker">
+                  <span>{tr("Choose photo / file")}</span>
+                  <input
+                    aria-label={tr("Upload answer sheet")}
+                    type="file"
+                    accept={
+                      features.data?.pdfSheets
+                        ? "image/*,application/pdf"
+                        : "image/*"
+                    }
+                    disabled={
+                      uploading ||
+                      conflict ||
+                      remaining === 0 ||
+                      readingLeft > 0 ||
+                      (answer?.attachmentIds?.length || 0) >= 4
+                    }
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) uploadSheet(e.target.files[0]);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                <label className="button subtle upload-picker camera-picker">
+                  <span>{tr("Take photo")}</span>
+                  <input
+                    aria-label={tr("Take a photo of handwritten answer")}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    disabled={
+                      uploading ||
+                      conflict ||
+                      remaining === 0 ||
+                      readingLeft > 0 ||
+                      (answer?.attachmentIds?.length || 0) >= 4
+                    }
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) uploadSheet(e.target.files[0]);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              </div>
               {uploading && (
                 <p className="accent small">
                   {tr("Uploading and validating page\u2026")}
