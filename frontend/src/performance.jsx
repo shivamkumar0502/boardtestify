@@ -27,7 +27,9 @@ export function Performance() {
   const [busy, setBusy] = useState(true);
   const [planBusy, setPlanBusy] = useState(false);
   const [plan, setPlan] = useState(null);
-  const [planError, setPlanError] = useState("");\n  const [mistakes, setMistakes] = useState([]);\n  const [mistakesError, setMistakesError] = useState("");
+  const [planError, setPlanError] = useState("");
+  const [mistakes, setMistakes] = useState([]);
+  const [mistakesError, setMistakesError] = useState("");
 
   async function load() {
     setBusy(true);
@@ -41,7 +43,10 @@ export function Performance() {
     }
   }
 
-  useEffect(() => {\n    void load();\n    request("/analytics/mistakes").then(setMistakes).catch((e) => setMistakesError(e.message || "Could not load mistake review"));\n  }, []);
+  useEffect(() => {
+    void load();
+    request("/analytics/mistakes").then(setMistakes).catch((e) => setMistakesError(e.message || "Could not load mistake review"));
+  }, []);
 
   async function generatePlan() {
     setPlanBusy(true);
