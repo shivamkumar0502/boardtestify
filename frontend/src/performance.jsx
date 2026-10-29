@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Activity, BookOpen, Target, TrendingUp, RefreshCw } from "lucide-react";
+import { Activity, BookOpen, Target, TrendingUp, RefreshCw, Sparkles, Clock3, CalendarDays } from "lucide-react";
 import { tr, useLanguage } from "@boardtestify/i18n";
 import { request } from "./api";
 import "./performance.css";
@@ -21,10 +21,13 @@ function ScoreBar({ value }) {
 }
 
 export function Performance() {
-  useLanguage();
+  const language = useLanguage();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(true);
+  const [planBusy, setPlanBusy] = useState(false);
+  const [plan, setPlan] = useState(null);
+  const [planError, setPlanError] = useState("");
 
   async function load() {
     setBusy(true);
@@ -39,6 +42,18 @@ export function Performance() {
   }
 
   useEffect(() => { void load(); }, []);
+
+  async function generatePlan() {
+    setPlanBusy(true);
+    setPlanError("");
+    try {
+      setPlan(await request("/study-plan", { language }, "POST"));
+    } catch (e) {
+      setPlanError(e.message || "Could not generate your study plan");
+    } finally {
+      setPlanBusy(false);
+    }
+  }
 
   return <section className="performance-page">
     <div className="page-heading">
@@ -103,6 +118,55 @@ export function Performance() {
           <Link className="button ghost" to="/app/tests">{tr("Find practice tests")} →</Link>
         </section>
       </div>
+
+      <section className="panel study-plan-panel">
+        <div className="row between">
+          <div>
+            <span className="eyebrow">{tr("YOUR NEXT 7 DAYS")}</span>
+            <h2>{tr("AI revision plan")}</h2>
+            <p className="muted">{tr("A practical plan generated from your finalized, evaluated answers and weakest tagged topics.")}</p>
+          </div>
+          <button className="button primary" onClick={generatePlan} disabled={planBusy || !data.finalized}>
+            <Sparkles size={16} /> {tr(planBusy ? "Building your plan…" : "Generate my plan")}
+          </button>
+        </div>
+        {!data.finalized && <p className="muted">{tr("Finalize at least one test with evaluated chapter/topic answers to generate a personalized plan.")}</p>}
+        {planError && <div className="notice error" role="alert">{tr(planError)}</div>}
+        {plan && <>
+          <div className="study-plan-intro">
+            <h3>{plan.title}</h3>
+            <p>{plan.summary}</p>
+          </div>
+          <div className="study-plan-days">
+            {plan.days.map((day) => <article className="study-day" key={day.day}>
+              <div className="study-day-heading">
+                <span className="study-day-number"><CalendarDays size={16} /> {tr("Day")} {day.day}</span>
+                <strong>{day.theme}</strong>
+              </div>
+              <div className="study-plan-tasks">
+                {day.tasks.map((task, index) => {
+                  const area = plan.evidence.find((item) => item.id === task.areaId);
+                  const activity = {
+                    READ_CONCEPT: "Revise concepts",
+                    SOLVE_PRACTICE: "Solve practice questions",
+                    REVIEW_MISTAKES: "Review mistakes",
+                    RETAKE_TEST: "Retake a short test",
+                  }[task.activity] || "Study session";
+                  return <div className="study-task" key={`${day.day}-${index}`}>
+                    <div className="row between">
+                      <strong>{tr(activity)}</strong>
+                      <span className="study-duration"><Clock3 size={14} /> {task.durationMinutes} {tr("min")}</span>
+                    </div>
+                    <span className="muted small">{tr(area?.subject || "Subject")} · {tr(area?.area || "Focus area")}</span>
+                    <p>{task.goal}</p>
+                  </div>;
+                })}
+              </div>
+            </article>)}
+          </div>
+          <p className="muted small">{plan.disclaimer}</p>
+        </>}
+      </section>
 
       <section className="panel">
         <h2>{tr("Recent score trend")}</h2>
