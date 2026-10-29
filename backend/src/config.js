@@ -51,7 +51,7 @@ export const env = z
     API_CONCURRENCY: z.coerce.number().int().min(10).max(1000).default(150),
     WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(2),
     RUN_WORKER: z.enum(["true", "false"]).default("true"),
-    AI_VISION_ENABLED: z.enum(["true", "false"]).default("false"),
+    AI_VISION_ENABLED: z.enum(["true", "false"]).default("true"),
     OCR_API_KEY: z.string().default(""),
     TWILIO_ACCOUNT_SID: z.string().default(""),
     TWILIO_AUTH_TOKEN: z.string().default(""),
