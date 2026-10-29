@@ -29,7 +29,7 @@ export function validateBsebDraft({ questions, source }) {
     (total, question) => total + (Number(question.data?.maximumMarks) || 0),
     0,
   );
-  const expectedTheoryMarks = Number.isFinite(Number(source.theoryMarks))
+  const expectedTheoryMarks = source.theoryMarks != null && Number.isFinite(Number(source.theoryMarks))
     ? Number(source.theoryMarks)
     : null;
   const countDifference = expectedOfferedQuestions === null
