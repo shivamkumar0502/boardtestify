@@ -157,7 +157,7 @@ const studyPlanSchema = z.object({
     day: z.number().int().min(1).max(7),
     theme: z.string().trim().min(1).max(120),
     tasks: z.array(z.object({
-      areaId: z.string().min(1).max(100),
+      areaId: z.string().min(1).max(300),
       activity: z.enum(["READ_CONCEPT", "SOLVE_PRACTICE", "REVIEW_MISTAKES", "RETAKE_TEST"]),
       durationMinutes: z.number().int().min(10).max(90),
       goal: z.string().trim().min(1).max(240),
