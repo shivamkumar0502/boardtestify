@@ -48,3 +48,8 @@ The importer does not auto-approve academic sources or publish AI-authored sugge
 Administrators can import either pack from Administration → Tests → Add practice tests. The original pack adds eight tests / eighty bilingual questions: linear equations, quadratic root sums, circle area, Ohm’s law, parallel/series capacitance, partnership profit shares and modern Indian history dates. They are original illustrative practice; the 2026–27 session is an organizational label, not official syllabus verification. Suggested keys and translations require academic approval. Both packs together contain 13 tests/95 questions. Re-imports do not overwrite reviewed changes or publish drafts.
 
 `GET /api/admin/practice-packs` lists packs. `POST /api/admin/practice-packs/import` accepts `{packId:"bseb-2026"}` or `{packId:"original-v1"}`; ADMIN/SUPER_ADMIN authorization, import rate/concurrency limits and audit records apply. Students cannot import or start unpublished tests. The command-line alternative for the original pack is `npm run seed:practice`. No client database is changed until an administrator imports or runs the command.
+
+
+## Official full-paper library
+
+The student test-series landing page exposes the complete official 2026 BSEB model-paper PDF links for the student's saved class and stream. The links point to BSEB-hosted PDFs where an individual PDF is available, otherwise to the official subject listing. This is a source library, not a claim that all papers have been converted into interactive CBT exams. A full CBT import still needs question extraction, independent answer-key/rubric validation and approval; no 2027 pattern is inferred from 2026 sources.

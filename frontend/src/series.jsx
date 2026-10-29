@@ -107,6 +107,9 @@ export function SeriesLibrary() {
     }
   }
   const group = groups?.find((g) => g.id === selected);
+  const officialPapers = (guide.data?.subjects || []).filter((subject) =>
+    subject.name.toLowerCase().includes(subjectSearch.toLowerCase()),
+  );
   return (
     <>
       <div className="page-heading">
@@ -187,6 +190,54 @@ export function SeriesLibrary() {
               ))}
             </select>
           </div>
+          {guide.data && (
+            <section className="official-papers-section" aria-labelledby="official-papers-title">
+              <div className="section-heading">
+                <div>
+                  <span className="eyebrow">{tr("OFFICIAL SOURCE PAPERS")}</span>
+                  <h2 id="official-papers-title">{tr("Full BSEB model papers")}</h2>
+                  <p className="muted">
+                    {tr("Open the complete subject paper published by BSEB. These links currently reference the 2026 model-paper set; check the board portal for a newer session.")}
+                  </p>
+                </div>
+                <a
+                  className="button subtle"
+                  href={user.classLevel === "10"
+                    ? "https://biharboardonline.com/modelpapermatric.html"
+                    : "https://biharboardonline.com/modelpaperinter.html"}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {tr("All official papers")} ↗
+                </a>
+              </div>
+              <div className="official-papers-grid">
+                {officialPapers.map((subject) => {
+                  const isPDF = /\.pdf(?:$|#)/i.test(subject.sourceUrl);
+                  return (
+                    <article className="official-paper-card" key={subject.key}>
+                      <div className="row between">
+                        <span className="tag orange-tag">{tr("Class {0}", [subject.classLevel])}</span>
+                        <span className="small muted">{subject.referenceYear || 2026}</span>
+                      </div>
+                      <h3>{tr(subject.name)}</h3>
+                      <p className="small muted">{tr(subject.role)}</p>
+                      <p>{subject.theoryMarks != null
+                        ? tr("{0} theory marks", [subject.theoryMarks])
+                        : tr("Check the official paper for marks and pattern")}</p>
+                      <p className="small">{tr(subject.paperQuestionLabel || "Refer to the official paper for question structure.")}</p>
+                      <a className="button primary" href={subject.sourceUrl} target="_blank" rel="noreferrer">
+                        {isPDF ? tr("Open full paper PDF") : tr("Find paper on BSEB portal")} ↗
+                      </a>
+                    </article>
+                  );
+                })}
+              </div>
+              <p className="small muted official-paper-note">
+                {tr("Source note: these are official PDF references, not interactive CBT tests or verified answer keys. The 2027/current-session paper pattern must not be inferred from a 2026 PDF. Full interactive mocks require question-by-question extraction, answer-key validation and staff approval before publishing.")}
+              </p>
+            </section>
+          )}
           {guide.data && (
             <details className="panel board-overview">
               <summary>{tr("BSEB subjects, marks & paper guide")}</summary>
