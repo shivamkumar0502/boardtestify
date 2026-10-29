@@ -82,6 +82,7 @@ app.use("/api/auth", otp);
 app.use(
   "/api",
   integrations,
+  bsebPaperImport,
   authoring,
   bsebSetup,
   series,
