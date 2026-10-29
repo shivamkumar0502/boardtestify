@@ -4,7 +4,7 @@ import { validateBsebDraft } from "../backend/src/bseb-validation.js";
 
 test("BSEB draft validation reports extracted types and catalog count mismatch", () => {
   const result = validateBsebDraft({
-    source: { theoryMarks: 80, sections: [{ offered: 100 }, { offered: 20 }] },
+    source: { theoryMarks: 80, durationMinutes: 165, sections: [{ offered: 100 }, { offered: 20 }] },
     questions: [
       { data: { type: "SINGLE_CHOICE", correct: ["a"] } },
       { data: { type: "LONG_ANSWER", correct: [], referenceAnswer: "Answer", rubric: [{ id: "r1" }] } },
@@ -15,6 +15,7 @@ test("BSEB draft validation reports extracted types and catalog count mismatch",
   assert.equal(result.extractedQuestions, 2);
   assert.equal(result.extractedListedMarks, 0);
   assert.equal(result.expectedTheoryMarks, 80);
+  assert.equal(result.expectedDurationMinutes, 165);
   assert.equal(result.expectedOfferedQuestions, 120);
   assert.equal(result.countDifference, -118);
   assert.deepEqual(result.questionTypes, { SINGLE_CHOICE: 1, LONG_ANSWER: 1 });
