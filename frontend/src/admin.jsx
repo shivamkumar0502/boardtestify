@@ -16,7 +16,7 @@ const sampleQuestion = {
     subjectId: "REPLACE_WITH_SUBJECT_ID",
   },
   type: "SINGLE_CHOICE",
-  language: "en",
+  language,
   text: "Enter the question",
   options: [
     {
@@ -1042,7 +1042,8 @@ function OfficialPaperImporter({ onImported }) {
   useLanguage();
   const [classLevel, setClassLevel] = useState("10");
   const [stream, setStream] = useState("GENERAL");
-  const [session, setSession] = useState("2025-26");
+  const [session, setSession] = useState("2026-27");
+  const [language, setLanguage] = useState("en");
   const [subjectKey, setSubjectKey] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -1077,7 +1078,7 @@ function OfficialPaperImporter({ onImported }) {
     <section className="panel" aria-label={tr("Official BSEB PDF to CBT importer")}>
       <h2>{tr("Convert official BSEB PDF to CBT draft")}</h2>
       <p className="muted small">
-        {tr("Downloads a selectable-text official 2026 model-paper PDF, extracts questions with AI, and saves a timed CBT draft. Answer keys, wording, marks, internal choices and rubrics remain unverified until reviewed. Scanned PDFs are not supported by this importer yet.")}
+        {tr("Downloads an official 2026 model-paper PDF and uses AI to create a timed CBT draft. Selectable-text and scanned/image-only PDFs (up to 30 pages) are supported when AI vision is enabled. Verify every question, answer key, marks, internal choice and rubric before publishing; the source is a 2026 reference, not a verified 2027 pattern.")}
       </p>
       <div className="grid-three">
         <label>
@@ -1118,6 +1119,13 @@ function OfficialPaperImporter({ onImported }) {
             ))}
           </select>
         </label>
+        <label>
+          {tr("Draft question language")}
+          <select value={language} disabled={busy} onChange={(e) => setLanguage(e.target.value)}>
+            <option value="en">{tr("English")}</option>
+            <option value="hi">{tr("Hindi")}</option>
+          </select>
+        </label>
       </div>
       <Notice error>{error || catalogError}</Notice>
       <button className="button primary" disabled={busy || !subjectKey || !/^\d{4}-\d{2}$/.test(session)} onClick={importPaper}>
@@ -1127,6 +1135,17 @@ function OfficialPaperImporter({ onImported }) {
         <div className="panel question-preview">
           <h3>{tr(result.title)}</h3>
           <p>{tr("Created as {0}; {1} questions extracted from {2} PDF pages.", [result.status, result.questions, result.pageCount])}</p>
+          {result.extractionMethod && (
+            <p className="muted small">{tr("Extraction method: ")}{tr(result.extractionMethod === "scanned-page-vision" ? "AI vision (scanned pages)" : "Selectable PDF text")}</p>
+          )}
+          {result.validation && (
+            <div className="panel">
+              <h4>{tr("Draft completeness check")}</h4>
+              <p>{tr("Extracted marks: {0} · Reference theory marks: {1}", [result.validation.extractedMarks, result.validation.expectedTheoryMarks ?? "n/a"])}</p>
+              <p>{tr("Question types: {0}", [Object.entries(result.validation.questionTypes || {}).map(([type, count]) => `${type}: ${count}`).join(" · ") || tr("None")])}</p>
+              <p>{tr("Validation: {0}", [result.validation.status])}</p>
+            </div>
+          )}
           <p className="muted small">{tr("Source: ")}<a href={result.sourceUrl} target="_blank" rel="noreferrer">{result.sourceUrl}</a></p>
           <Notice>{tr(result.message)}</Notice>
           {!!result.warnings?.length && (
