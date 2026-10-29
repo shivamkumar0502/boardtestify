@@ -40,3 +40,21 @@ test("book OCR parser accepts Devanagari numbering, inline options and descripti
   assert.equal(rows[1].type, "SHORT_ANSWER");
   assert.equal(rows[1].referenceAnswer, "");
 });
+
+test("book options may share a line with the question and use Hindi or English markers", () => {
+  const rows = parsePastedMCQ(
+    "Q. (1)Choose a city. A) New Delhi B) Patna C) Ranchi D) Jaipur\nAnswer: B\nप्रश्न २.सही संख्या चुनिए।\nक) एक ख) दो\nग) तीन घ) चार\nउत्तर: ख",
+  );
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].text, "Choose a city.");
+  assert.deepEqual(
+    rows[0].options.map((o) => o.text),
+    ["New Delhi", "Patna", "Ranchi", "Jaipur"],
+  );
+  assert.deepEqual(
+    rows[1].options.map((o) => o.id),
+    ["a", "b", "c", "d"],
+  );
+  assert.deepEqual(rows[1].correct, ["b"]);
+  assert.throws(() => parsePastedMCQ("1. Q A) First A) Repeated"));
+});

@@ -1,4 +1,15 @@
 export default {
+  "Preparing selected photo": "चुनी हुई तस्वीर तैयार हो रही है",
+  "Drag over one question column to select it. Rotate sideways photos before selecting.":
+    "एक प्रश्न कॉलम चुनने के लिए उस पर उंगली या माउस खींचें। टेढ़ी तस्वीर को चुनने से पहले घुमाएँ।",
+  "Photo crop preview": "तस्वीर का चयन",
+  "Rotate left": "बाएँ घुमाएँ",
+  "Rotate right": "दाएँ घुमाएँ",
+  "Use full photo": "पूरी तस्वीर चुनें",
+  "Adjust crop & read again": "चयन सुधारें और दोबारा पढ़ें",
+  "OCR confidence is low. Compare the photo with the text, correct mistakes or retry with a tighter crop. Answers have not been guessed.":
+    "OCR का भरोसा कम है। तस्वीर से पाठ मिलाएँ, गलतियाँ सुधारें या छोटा हिस्सा चुनकर दोबारा पढ़ें। उत्तर अनुमान से नहीं भरे गए हैं।",
+
   "A clean slate": "नई शुरुआत",
   "A focused space for Class 10 & 12. Build your concepts, experience real mock tests, and turn every answer into a better one.":
     "कक्षा 10 और 12 की तैयारी के लिए एक जगह। अवधारणाएँ समझें, मॉक टेस्ट दें और हर उत्तर से सुधार करें।",

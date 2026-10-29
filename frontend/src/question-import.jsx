@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { tr, useLanguage } from "@boardtestify/i18n";
 import { questionSchema } from "@boardtestify/domain";
+import { PhotoSelection } from "./photo-selection";
+import { fullPhoto } from "./ocr-image";
 import { readPrintedPhoto } from "./local-ocr";
 import { AcademicPicker, QuestionForm } from "./authoring";
 import { useLoad, Notice } from "./main";
@@ -36,6 +38,10 @@ export function QuestionImport({ onSaved, onCSV, initialJobId = "" }) {
   const loaded = useRef("");
   const ocrAbort = useRef(null),
     photoTextPending = useRef(false);
+  const [photoOptions, setPhotoOptions] = useState({
+    rotation: 0,
+    crop: fullPhoto,
+  });
   const [localSourceJobId, setLocalSourceJobId] = useState("");
   const [photoEngine, setPhotoEngine] = useState("LOCAL"),
     [ocrProgress, setOCRProgress] = useState(""),
@@ -44,6 +50,7 @@ export function QuestionImport({ onSaved, onCSV, initialJobId = "" }) {
   useEffect(() => {
     const url = file ? URL.createObjectURL(file) : "";
     setPhotoPreview(url);
+    setPhotoOptions({ rotation: 0, crop: fullPhoto });
     setLocalSourceJobId("");
     photoTextPending.current = false;
     return () => {
@@ -104,11 +111,12 @@ export function QuestionImport({ onSaved, onCSV, initialJobId = "" }) {
   async function extract() {
     setError("");
     setMessage("");
-    if (!/^[a-f0-9]{24}$/i.test(academic.subjectId)) {
+    const localPhoto = method === "PHOTO" && photoEngine === "LOCAL";
+    if (!localPhoto && !/^[a-f0-9]{24}$/i.test(academic.subjectId)) {
       setError("Choose a subject before saving.");
       return;
     }
-    if (sourceTitle.trim().length < 2) {
+    if (!localPhoto && sourceTitle.trim().length < 2) {
       setError("Enter the book or source name.");
       return;
     }
@@ -131,12 +139,15 @@ export function QuestionImport({ onSaved, onCSV, initialJobId = "" }) {
           language,
           (percent, status) => setOCRProgress(`${status} · ${percent}%`),
           ocrAbort.current.signal,
+          photoOptions,
         );
         setText(result.text);
         photoTextPending.current = true;
         setMethod("TEXT");
         setMessage(
-          "Photo text is ready. Correct OCR mistakes below, then format questions. Check equations and option order carefully.",
+          result.confidence < 65
+            ? "OCR confidence is low. Compare the photo with the text, correct mistakes or retry with a tighter crop. Answers have not been guessed."
+            : "Photo text is ready. Correct OCR mistakes below, then format questions. Check equations and option order carefully.",
         );
         return;
       }
@@ -247,6 +258,7 @@ export function QuestionImport({ onSaved, onCSV, initialJobId = "" }) {
             {tr("Question language")}
             <select
               value={language}
+              disabled={busy}
               onChange={(e) => setLanguage(e.target.value)}
             >
               <option value="en">English</option>
@@ -265,14 +277,26 @@ export function QuestionImport({ onSaved, onCSV, initialJobId = "" }) {
               aria-label={tr("Book page photo")}
               type="file"
               accept="image/jpeg,image/png,image/webp"
+              disabled={busy}
               onChange={(e) => setFile(e.target.files?.[0] || null)}
             />
-            {photoPreview && (
-              <img
-                className="source-photo-preview"
-                src={photoPreview}
-                alt={tr("Selected book photo")}
+            {file && photoEngine === "LOCAL" ? (
+              <PhotoSelection
+                file={file}
+                {...photoOptions}
+                disabled={busy}
+                onChange={(patch) =>
+                  setPhotoOptions((old) => ({ ...old, ...patch }))
+                }
               />
+            ) : (
+              photoPreview && (
+                <img
+                  className="source-photo-preview"
+                  src={photoPreview}
+                  alt={tr("Selected book photo")}
+                />
+              )
             )}
             <label>
               {tr("Photo reader")}
@@ -329,6 +353,23 @@ export function QuestionImport({ onSaved, onCSV, initialJobId = "" }) {
               )}
             </small>
           </label>
+        )}
+        {method === "TEXT" && photoTextPending.current && photoPreview && (
+          <details open>
+            <summary>{tr("Compare selected photo · this device")}</summary>
+            <img
+              className="source-photo-preview"
+              src={photoPreview}
+              alt={tr("Selected book photo")}
+            />
+            <button
+              className="button subtle"
+              disabled={busy}
+              onClick={() => setMethod("PHOTO")}
+            >
+              {tr("Adjust crop & read again")}
+            </button>
+          </details>
         )}
         <button
           className="button primary"

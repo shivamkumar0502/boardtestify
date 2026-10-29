@@ -65,3 +65,21 @@ All `/admin/question-imports` routes require CONTENT_EDITOR/ADMIN/SUPER_ADMIN au
 Malformed inputs, wrong owners/roles, missing keys, unsupported images, stale leases and failed providers have explicit error/review states. Actual OCR accuracy on the client's books, paid-provider acceptance, physical Android testing and production/staging workload tests remain separate acceptance work. Local tests use controlled provider adapters and disposable storage/database fixtures; no live paid requests or client database writes were performed.
 
 For local networks where the IPv4 MongoDB ping succeeds, set `DB_IP_FAMILY=4` in the root `.env` rather than editing `models.js`. The default remains automatic; values 4 and 6 are supported. Keep the existing timeout configuration for slow Atlas connections.
+
+### Printed book-photo recovery
+
+The local reader now lets staff rotate the photo and drag a rectangle over one
+question column before reading. The selected upright area is enlarged when small,
+converted to greyscale with a white border and read as a text block with deskew.
+Use full photo resets the selection. Local reading does not require academic
+metadata; choose a subject and source before formatting/saving the recovered text.
+Compare the source with the editable text and use Adjust crop & read again when
+needed. Low-confidence output is flagged; no answer key is invented.
+
+The paste formatter accepts inline A) / (A) options, Hindi क) / (क) options,
+Devanagari numbers and numbered questions without a following space. Duplicate
+options, invalid keys and more than ten questions still require correction.
+Free printed OCR remains a transcription aid: handwriting, equations, diagrams,
+perspective distortion and blurry photos need manual review or a configured cloud
+vision provider. Crop/rotation controls apply to the local reader; cloud mode sends
+the original photo through the existing private upload path.
