@@ -4,7 +4,7 @@ import { validateBsebDraft } from "../backend/src/bseb-validation.js";
 
 test("BSEB draft validation reports extracted types and catalog count mismatch", () => {
   const result = validateBsebDraft({
-    source: { sections: [{ offered: 100 }, { offered: 20 }] },
+    source: { theoryMarks: 80, sections: [{ offered: 100 }, { offered: 20 }] },
     questions: [
       { data: { type: "SINGLE_CHOICE", correct: ["a"] } },
       { data: { type: "LONG_ANSWER", correct: [], referenceAnswer: "Answer", rubric: [{ id: "r1" }] } },
@@ -13,6 +13,8 @@ test("BSEB draft validation reports extracted types and catalog count mismatch",
 
   assert.equal(result.status, "REVIEW_REQUIRED");
   assert.equal(result.extractedQuestions, 2);
+  assert.equal(result.extractedListedMarks, 0);
+  assert.equal(result.expectedTheoryMarks, 80);
   assert.equal(result.expectedOfferedQuestions, 120);
   assert.equal(result.countDifference, -118);
   assert.deepEqual(result.questionTypes, { SINGLE_CHOICE: 1, LONG_ANSWER: 1 });
@@ -26,6 +28,7 @@ test("BSEB draft validation handles catalogs without section counts", () => {
   });
 
   assert.equal(result.expectedOfferedQuestions, null);
+  assert.equal(result.expectedTheoryMarks, null);
   assert.equal(result.countDifference, null);
   assert.equal(result.missingDescriptiveRubrics, 1);
   assert.ok(result.warnings.some((warning) => warning.includes("incomplete reference answers/rubrics")));
