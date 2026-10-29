@@ -35,9 +35,9 @@ const candidate = z.object({
 });
 export function parsePastedMCQ(text) {
   assert(
-    typeof text === "string" && text.trim() && text.length <= 20000,
+    typeof text === "string" && text.trim() && text.length <= 100000,
     400,
-    "Paste up to 20,000 characters",
+    "Paste up to 100,000 characters",
   );
   const rows = [];
   let current = null,
@@ -124,9 +124,9 @@ export function parsePastedMCQ(text) {
   }
   flush();
   assert(
-    rows.length > 0 && rows.length <= 10,
+    rows.length > 0 && rows.length <= 100,
     400,
-    "Import one to ten questions at a time",
+    "Import one to one hundred questions at a time",
   );
   assert(
     rows.every((q) =>
