@@ -75,7 +75,7 @@ app.use(
   concurrencyGate(2),
   express.json({ limit: "3mb" }),
 );
-app.use(express.json({ limit: "384kb" }));
+app.use(express.json({ limit: "3mb" }));
 app.use("/api/auth", authRouter);
 app.use("/api/auth", otp);
 app.use(
