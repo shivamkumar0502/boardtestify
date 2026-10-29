@@ -60,11 +60,6 @@ export function PaperGuide({ paper }) {
           "Language papers use grouped tasks with subparts and internal choices. Keep passage questions together. Practical/internal assessment is not included in an online theory mock.",
         )}
       </p>
-      {paper.sourceUrl && (
-        <a href={paper.sourceUrl} target="_blank" rel="noreferrer">
-          {tr("Read official model paper")}
-        </a>
-      )}
     </details>
   );
 }
