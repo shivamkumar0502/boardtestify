@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Activity, BookOpen, Target, TrendingUp, RefreshCw } from "lucide-react";
 import { tr, useLanguage } from "@boardtestify/i18n";
 import { request } from "./api";
+import "./performance.css";
 
 function Metric({ label, value, detail, icon: Icon }) {
   return <article className="stat">
