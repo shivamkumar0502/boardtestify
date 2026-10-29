@@ -6,14 +6,14 @@ test("BSEB draft validation reports extracted types and catalog count mismatch",
   const result = validateBsebDraft({
     source: { theoryMarks: 80, durationMinutes: 165, sections: [{ offered: 100 }, { offered: 20 }] },
     questions: [
-      { data: { type: "SINGLE_CHOICE", correct: ["a"] } },
-      { data: { type: "LONG_ANSWER", correct: [], referenceAnswer: "Answer", rubric: [{ id: "r1" }] } },
+      { data: { type: "SINGLE_CHOICE", correct: ["a"], maximumMarks: 1 } },
+      { data: { type: "LONG_ANSWER", correct: [], referenceAnswer: "Answer", rubric: [{ id: "r1" }], maximumMarks: 5 } },
     ],
   });
 
   assert.equal(result.status, "REVIEW_REQUIRED");
   assert.equal(result.extractedQuestions, 2);
-  assert.equal(result.extractedListedMarks, 0);
+  assert.equal(result.extractedListedMarks, 6);
   assert.equal(result.expectedTheoryMarks, 80);
   assert.equal(result.expectedDurationMinutes, 165);
   assert.equal(result.expectedOfferedQuestions, 120);
