@@ -9,9 +9,12 @@ export const env = z
     MONGODB_URI: z.string().min(1),
     JWT_SECRET: z.string().min(48),
     WEB_ORIGIN: z.string().url(),
-    AI_BASE_URL: z.string().url().default("https://api.openai.com/v1"),
+    AI_BASE_URL: z
+      .string()
+      .url()
+      .default("https://generativelanguage.googleapis.com/v1beta/openai/"),
     AI_API_KEY: z.string().default(""),
-    AI_MODEL: z.string().default(""),
+    AI_MODEL: z.string().default("gemini-3.8-flash"),
     SMTP_URL: z.string().default(""),
     MAIL_FROM: z.string().default(""),
     RAZORPAY_KEY_ID: z.string().default(""),
@@ -48,7 +51,7 @@ export const env = z
     API_CONCURRENCY: z.coerce.number().int().min(10).max(1000).default(150),
     WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(2),
     RUN_WORKER: z.enum(["true", "false"]).default("true"),
-    AI_VISION_ENABLED: z.enum(["true", "false"]).default("false"),
+    AI_VISION_ENABLED: z.enum(["true", "false"]).default("true"),
     OCR_API_KEY: z.string().default(""),
     TWILIO_ACCOUNT_SID: z.string().default(""),
     TWILIO_AUTH_TOKEN: z.string().default(""),

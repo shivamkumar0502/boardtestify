@@ -137,7 +137,7 @@ test("staff see release configuration gaps without exposing service keys", async
     page.getByRole("heading", { name: "Release readiness" }),
   ).toBeVisible();
   await expect(
-    page.getByText("Missing configuration: AI_API_KEY, AI_MODEL"),
+    page.getByText("Missing configuration: AI_API_KEY"),
   ).toBeVisible();
   await expect(
     page.getByText("PDF answer sheets", { exact: true }),
