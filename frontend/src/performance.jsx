@@ -164,7 +164,7 @@ export function Performance() {
               </div>
               <h3>{mistake.text}</h3>
               <small className="muted">{tr(mistake.title)} · {mistake.date ? new Date(mistake.date).toLocaleDateString() : "—"}</small>
-              {mistake.feedback && <p>{mistake.feedback}</p>}
+              {typeof mistake.feedback === "string" && mistake.feedback && <p>{mistake.feedback}</p>}
               {mistake.missingPoints?.length > 0 && <div><strong>{tr("Missing points")}</strong><ul>{mistake.missingPoints.map((point, i) => <li key={i}>{point}</li>)}</ul></div>}
               {mistake.improvementAdvice?.length > 0 && <div><strong>{tr("How to improve")}</strong><ul>{mistake.improvementAdvice.map((tip, i) => <li key={i}>{tip}</li>)}</ul></div>}
               <details>
