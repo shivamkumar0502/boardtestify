@@ -190,7 +190,7 @@ export function SeriesLibrary() {
           {guide.data && (
             <section className="panel cbt-intro" aria-label={tr("Interactive CBT practice")}>
               <h2>{tr("Practice with interactive CBT mocks")}</h2>
-              <p className="muted">{tr("Official-paper PDF links have been removed from this student library. BSEB papers are being converted into timed interactive tests. Open a subject series and choose CBT mocks; only reviewed and published tests will appear.")}</p>
+              <p className="muted">{tr("Official-paper PDF links have been removed from this student library. Administrators can convert official source papers into timed CBT drafts, review the questions and answer keys, then publish them. Only reviewed and published tests appear here.")}</p>
             </section>
           )}
           {guide.data && (
@@ -444,7 +444,9 @@ export function SeriesLibrary() {
           {!loading && !rows.length && (
             <Empty
               title="No tests match your filters"
-              detail="Try another mode or clear your search."
+              detail={mode === "CBT"
+                ? "No published CBT mock is available for this subject yet. An administrator must import the source paper as a CBT draft, review it and publish it first."
+                : "Try another mode or clear your search."}
             />
           )}
         </>
