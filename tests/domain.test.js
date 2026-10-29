@@ -7,6 +7,7 @@ import {
   validateEvaluation,
   answerStatus,
   sanitizeExport,
+  patternSchema,
 } from "@boardtestify/domain";
 const academic = {
   session: "2026-27",
@@ -205,4 +206,22 @@ test("image-based MCQs require a validated image and score like single-choice qu
   assert.equal(scoreObjective(imageQuestion, ["b"]), -imageQuestion.negativeMarks);
   assert.equal(questionSchema.safeParse({ ...imageQuestion, imageKey: undefined }).success, false);
   assert.equal(questionSchema.safeParse({ ...imageQuestion, correct: ["a", "b"] }).success, false);
+});
+
+
+test("pattern minimum passing marks are optional and bounded by total marks", () => {
+  const pattern = {
+    title: "Example pattern",
+    academic,
+    versionLabel: "1",
+    officialSource: "https://example.org/pattern.pdf",
+    verifiedAt: new Date().toISOString(),
+    durationMinutes: 60,
+    totalMarks: 10,
+    sections: [{ id: "one", title: "Section one", offered: 10, answerCount: 10, marksEach: 1, types: ["SINGLE_CHOICE"] }],
+  };
+  assert.equal(patternSchema.safeParse(pattern).success, true);
+  assert.equal(patternSchema.safeParse({ ...pattern, minimumPassingMarks: 5 }).success, true);
+  assert.equal(patternSchema.safeParse({ ...pattern, minimumPassingMarks: 11 }).success, false);
+  assert.equal(patternSchema.safeParse({ ...pattern, minimumPassingMarks: -1 }).success, false);
 });
