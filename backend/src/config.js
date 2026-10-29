@@ -9,9 +9,12 @@ export const env = z
     MONGODB_URI: z.string().min(1),
     JWT_SECRET: z.string().min(48),
     WEB_ORIGIN: z.string().url(),
-    AI_BASE_URL: z.string().url().default("https://api.openai.com/v1"),
+    AI_BASE_URL: z
+      .string()
+      .url()
+      .default("https://generativelanguage.googleapis.com/v1beta/openai/"),
     AI_API_KEY: z.string().default(""),
-    AI_MODEL: z.string().default(""),
+    AI_MODEL: z.string().default("gemini-3.8-flash"),
     SMTP_URL: z.string().default(""),
     MAIL_FROM: z.string().default(""),
     RAZORPAY_KEY_ID: z.string().default(""),
