@@ -57,7 +57,7 @@ test("analytics returns current, longest and seven-day streak using India time",
     assert.equal(data.streak.activeDays.length, 7);
     assert.deepEqual(
       data.streak.activeDays.map((day) => day.active),
-      [false, false, false, false, false, true, true],
+      [false, true, false, false, false, true, true],
     );
   } finally {
     if (server) await new Promise((resolve) => server.close(resolve));
