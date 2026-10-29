@@ -16,6 +16,7 @@ import { HttpError } from "./lib.js";
 import { authRouter } from "./auth.js";
 import { content } from "./content.js";
 import { attempts } from "./attempts.js";
+import { analytics } from "./analytics.js";
 import { integrations, webhook } from "./integrations.js";
 import { sharedLimit, concurrencyGate } from "./reliability.js";
 import { management } from "./management.js";
@@ -89,6 +90,7 @@ app.use(
   management,
   attachments,
   attempts,
+  analytics,
 );
 const webDist = fileURLToPath(new URL("../../frontend/dist/", import.meta.url));
 app.use(
