@@ -1141,7 +1141,7 @@ function OfficialPaperImporter({ onImported }) {
           {result.validation && (
             <div className="panel">
               <h4>{tr("Draft completeness check")}</h4>
-              <p>{tr("Listed-question marks: {0} · Reference theory marks: {1}", [result.validation.extractedMarks, result.validation.expectedTheoryMarks ?? "n/a"])}</p>
+              <p>{tr("Listed-question marks: {0} · Reference theory marks: {1}", [result.validation.extractedListedMarks, result.validation.expectedTheoryMarks ?? "n/a"])}</p>
               <p>{tr("Question types: {0}", [Object.entries(result.validation.questionTypes || {}).map(([type, count]) => `${type}: ${count}`).join(" · ") || tr("None")])}</p>
               <p>{tr("Validation: {0}", [result.validation.status])}</p>
               <p className="muted small">{tr("Listed-question marks include offered alternatives; compare them with answer limits and internal choices in the source paper.")}</p>
