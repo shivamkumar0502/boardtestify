@@ -16,7 +16,7 @@ const sampleQuestion = {
     subjectId: "REPLACE_WITH_SUBJECT_ID",
   },
   type: "SINGLE_CHOICE",
-  language,
+  language: "en",
   text: "Enter the question",
   options: [
     {
@@ -1064,7 +1064,7 @@ function OfficialPaperImporter({ onImported }) {
         session,
         classLevel,
         stream,
-        language: "en",
+        language,
       }, "POST");
       setResult(draft);
       onImported();
@@ -1108,7 +1108,7 @@ function OfficialPaperImporter({ onImported }) {
         </label>
         <label>
           {tr("Academic session")}
-          <input value={session} disabled={busy} placeholder="2025-26" onChange={(e) => setSession(e.target.value)} />
+          <input value={session} disabled={busy} placeholder="2026-27" onChange={(e) => setSession(e.target.value)} />
         </label>
         <label>
           {tr("Official 2026 paper")}
@@ -1141,9 +1141,10 @@ function OfficialPaperImporter({ onImported }) {
           {result.validation && (
             <div className="panel">
               <h4>{tr("Draft completeness check")}</h4>
-              <p>{tr("Extracted marks: {0} · Reference theory marks: {1}", [result.validation.extractedMarks, result.validation.expectedTheoryMarks ?? "n/a"])}</p>
+              <p>{tr("Listed-question marks: {0} · Reference theory marks: {1}", [result.validation.extractedMarks, result.validation.expectedTheoryMarks ?? "n/a"])}</p>
               <p>{tr("Question types: {0}", [Object.entries(result.validation.questionTypes || {}).map(([type, count]) => `${type}: ${count}`).join(" · ") || tr("None")])}</p>
               <p>{tr("Validation: {0}", [result.validation.status])}</p>
+              <p className="muted small">{tr("Listed-question marks include offered alternatives; compare them with answer limits and internal choices in the source paper.")}</p>
             </div>
           )}
           <p className="muted small">{tr("Source: ")}<a href={result.sourceUrl} target="_blank" rel="noreferrer">{result.sourceUrl}</a></p>
