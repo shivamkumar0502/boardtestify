@@ -137,7 +137,65 @@ analytics.get("/analytics/detailed", async (req, res) => {
     .sort((a, b) => (a.percent ?? 101) - (b.percent ?? 101))
     .slice(0, 12);
 
+  const dayKey = (date) => new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+  const activityDates = await Attempt.aggregate([
+    { $match: { userId: String(req.user._id), status: { $ne: "ACTIVE" } } },
+    {
+      $project: {
+        activityDate: {
+          $ifNull: ["$submittedAt", { $ifNull: ["$createdAt", "$startedAt"] }],
+        },
+      },
+    },
+    { $match: { activityDate: { $ne: null } } },
+    {
+      $project: {
+        day: {
+          $dateToString: {
+            format: "%Y-%m-%d",
+            date: "$activityDate",
+            timezone: "Asia/Kolkata",
+          },
+        },
+      },
+    },
+    { $group: { _id: "$day" } },
+    { $sort: { _id: 1 } },
+  ]);
+  const activeDays = new Set(activityDates.map((row) => row._id));
+  const today = dayKey(new Date());
+  const shiftDay = (key, amount) => {
+    const [year, month, day] = key.split("-").map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day + amount, 12));
+    return date.toISOString().slice(0, 10);
+  };
+  let currentStreak = 0;
+  let cursor = activeDays.has(today) ? today : shiftDay(today, -1);
+  while (activeDays.has(cursor)) {
+    currentStreak += 1;
+    cursor = shiftDay(cursor, -1);
+  }
+  let longestStreak = 0;
+  let run = 0;
+  const orderedDays = [...activeDays].sort();
+  let previous = null;
+  for (const day of orderedDays) {
+    run = previous && shiftDay(previous, 1) === day ? run + 1 : 1;
+    longestStreak = Math.max(longestStreak, run);
+    previous = day;
+  }
+  const lastSevenDays = Array.from({ length: 7 }, (_, index) => {
+    const date = shiftDay(today, index - 6);
+    return { date, active: activeDays.has(date) };
+  });
+
   res.json({
+    streak: { current: currentStreak, longest: longestStreak, activeDays: lastSevenDays },
     completed,
     finalized,
     averagePercent: finalized ? Math.round(finalizedPercentTotal / finalized) : null,
@@ -277,4 +335,65 @@ analytics.post("/study-plan", async (req, res) => {
       ? "यह योजना आपके उपलब्ध मूल्यांकित उत्तरों पर आधारित अध्ययन-सुझाव है, आधिकारिक पाठ्यक्रम या बोर्ड परिणाम की भविष्यवाणी नहीं।"
       : "This plan uses your available evaluated answers as study guidance; it is not an official syllabus or a predicted board result.",
   });
+});
+
+
+analytics.get("/analytics/mistakes", async (req, res) => {
+  const attempts = await Attempt.find({
+    userId: String(req.user._id),
+    status: { $ne: "ACTIVE" },
+    "summary.provisional": false,
+  })
+    .select("snapshot questions answers evaluations submittedAt createdAt")
+    .sort({ submittedAt: -1, createdAt: -1 })
+    .limit(40)
+    .lean();
+
+  const rows = [];
+  const academicIds = new Set();
+  for (const attempt of attempts) {
+    for (const question of attempt.questions || []) {
+      const evaluation = attempt.evaluations?.[question._id];
+      if (!evaluation || evaluation.status !== "EVALUATED") continue;
+      const maximum = Number(question.maximumMarks) || Number(evaluation.maximumMarks) || 0;
+      const awarded = Number(evaluation.awardedMarks);
+      if (!(maximum > 0) || !Number.isFinite(awarded) || awarded >= maximum) continue;
+      const academic = question.academic || {};
+      if (academic.subjectId) academicIds.add(String(academic.subjectId));
+      if (academic.chapterId) academicIds.add(String(academic.chapterId));
+      rows.push({
+        id: String(question._id),
+        attemptId: String(attempt._id),
+        title: label(attempt.snapshot?.title, "BoardTestify test"),
+        date: attempt.submittedAt || attempt.createdAt,
+        text: label(question.text, "Question"),
+        type: question.type,
+        subjectId: String(academic.subjectId || ""),
+        chapterId: String(academic.chapterId || ""),
+        topic: label(academic.topic, ""),
+        answer: attempt.answers?.[question._id]?.value ?? null,
+        referenceAnswer: label(question.referenceAnswer, ""),
+        explanation: label(question.explanation, ""),
+        awardedMarks: Math.max(0, Math.min(maximum, awarded)),
+        maximumMarks: maximum,
+        feedback: evaluation.feedback || "",
+        missingPoints: Array.isArray(evaluation.missingPoints) ? evaluation.missingPoints : [],
+        improvementAdvice: Array.isArray(evaluation.improvementAdvice) ? evaluation.improvementAdvice : [],
+      });
+    }
+  }
+  const academicRows = academicIds.size
+    ? await Academic.find({
+        _id: { $in: [...academicIds] },
+        classLevel: req.user.classLevel,
+        stream: req.user.stream,
+      }).select("name").lean()
+    : [];
+  const names = new Map(academicRows.map((row) => [String(row._id), row.name]));
+  rows.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  res.json(rows.slice(0, 25).map((row) => ({
+    ...row,
+    subject: names.get(row.subjectId) || "Subject",
+    chapter: names.get(row.chapterId) || row.topic || "Chapter not tagged",
+  })));
 });

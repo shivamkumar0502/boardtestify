@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Activity, BookOpen, Target, TrendingUp, RefreshCw, Sparkles, Clock3, CalendarDays } from "lucide-react";
+import { Activity, BookOpen, Target, TrendingUp, RefreshCw, Sparkles, Clock3, CalendarDays, Flame, Trophy } from "lucide-react";
 import { tr, useLanguage } from "@boardtestify/i18n";
 import { request } from "./api";
 import "./performance.css";
@@ -28,6 +28,8 @@ export function Performance() {
   const [planBusy, setPlanBusy] = useState(false);
   const [plan, setPlan] = useState(null);
   const [planError, setPlanError] = useState("");
+  const [mistakes, setMistakes] = useState([]);
+  const [mistakesError, setMistakesError] = useState("");
 
   async function load() {
     setBusy(true);
@@ -41,7 +43,10 @@ export function Performance() {
     }
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+    request("/analytics/mistakes").then(setMistakes).catch((e) => setMistakesError(e.message || "Could not load mistake review"));
+  }, []);
 
   async function generatePlan() {
     setPlanBusy(true);
@@ -73,6 +78,35 @@ export function Performance() {
     {busy && !data && <p className="muted">{tr("Loading your performance…")}</p>}
 
     {data && <>
+      <section className="panel streak-panel" aria-label={tr("Study streak")}>
+        <div className="streak-summary">
+          <div className="streak-current">
+            <span className="streak-flame"><Flame size={22} /></span>
+            <div>
+              <span className="eyebrow">{tr("BUILD YOUR HABIT")}</span>
+              <h2>{data.streak?.current ?? 0} {tr("day streak")}</h2>
+              <p className="muted">{tr("Submit at least one test each day to keep your streak going.")}</p>
+            </div>
+          </div>
+          <div className="streak-best">
+            <Trophy size={19} />
+            <div><strong>{data.streak?.longest ?? 0} {tr("days")}</strong><small className="muted">{tr("Longest streak")}</small></div>
+          </div>
+        </div>
+        <div className="streak-week" aria-label={tr("Study activity for the last seven days")}>
+          {(data.streak?.activeDays || []).map((day) => {
+            const date = new Date(`${day.date}T12:00:00+05:30`);
+            const weekday = new Intl.DateTimeFormat(language === "hi" ? "hi-IN" : "en-IN", { weekday: "short", timeZone: "Asia/Kolkata" }).format(date);
+            return <div className={`streak-day ${day.active ? "is-active" : ""}`} key={day.date} title={day.date}>
+              <span>{weekday}</span>
+              <strong>{date.getDate()}</strong>
+              <span className="streak-day-mark" aria-label={day.active ? tr("Studied") : tr("No submitted test")}>{day.active ? "✓" : "·"}</span>
+            </div>;
+          })}
+        </div>
+        <p className="muted small">{tr("A day counts when you submit a test. Dates use India Standard Time; opening the app alone does not count.")}</p>
+      </section>
+
       <div className="stats-grid">
         <Metric icon={BookOpen} label="Completed attempts" value={data.completed} detail="Submitted tests, including pending reviews" />
         <Metric icon={Target} label="Finalized results" value={data.finalized} detail="Scores with all evaluations complete" />
@@ -118,6 +152,36 @@ export function Performance() {
           <Link className="button ghost" to="/app/tests">{tr("Find practice tests")} →</Link>
         </section>
       </div>
+
+      <section className="panel mistakes-panel">
+        <div>
+          <span className="eyebrow">{tr("LEARN FROM EVERY ATTEMPT")}</span>
+          <h2>{tr("Mistake review")}</h2>
+          <p className="muted">{tr("Revisit evaluated answers that missed full marks, with explanations and feedback from your saved attempts.")}</p>
+        </div>
+        {mistakesError && <div className="notice error" role="alert">{tr(mistakesError)}</div>}
+        {!mistakes.length ? <p className="muted">{tr("No finalized mistakes to review yet. Submit and finalize a test to build your review list.")}</p> :
+          <div className="mistake-list">
+            {mistakes.map((mistake) => <article className="mistake-card" key={`${mistake.attemptId}-${mistake.id}`}>
+              <div className="row between mistake-meta">
+                <span className="tag">{tr(mistake.subject)} · {tr(mistake.chapter)}</span>
+                <strong className="mistake-marks">{mistake.awardedMarks}/{mistake.maximumMarks} {tr("marks")}</strong>
+              </div>
+              <h3>{mistake.text}</h3>
+              <small className="muted">{tr(mistake.title)} · {mistake.date ? new Date(mistake.date).toLocaleDateString() : "—"}</small>
+              {typeof mistake.feedback === "string" && mistake.feedback && <p>{mistake.feedback}</p>}
+              {mistake.missingPoints?.length > 0 && <div><strong>{tr("Missing points")}</strong><ul>{mistake.missingPoints.map((point, i) => <li key={i}>{point}</li>)}</ul></div>}
+              {mistake.improvementAdvice?.length > 0 && <div><strong>{tr("How to improve")}</strong><ul>{mistake.improvementAdvice.map((tip, i) => <li key={i}>{tip}</li>)}</ul></div>}
+              <details>
+                <summary>{tr("Show reference answer and explanation")}</summary>
+                {mistake.referenceAnswer && <div className="mistake-reference"><strong>{tr("Reference answer")}</strong><p>{mistake.referenceAnswer}</p></div>}
+                {mistake.explanation && <div className="mistake-reference"><strong>{tr("Explanation")}</strong><p>{mistake.explanation}</p></div>}
+              </details>
+              <Link className="button ghost" to={`/result/${mistake.attemptId}`}>{tr("Open result")} →</Link>
+            </article>)}
+          </div>
+        }
+      </section>
 
       <section className="panel study-plan-panel">
         <div className="row between">
