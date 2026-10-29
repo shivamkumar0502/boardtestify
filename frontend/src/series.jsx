@@ -107,9 +107,6 @@ export function SeriesLibrary() {
     }
   }
   const group = groups?.find((g) => g.id === selected);
-  const officialPapers = (guide.data?.subjects || []).filter((subject) =>
-    subject.name.toLowerCase().includes(subjectSearch.toLowerCase()),
-  );
   return (
     <>
       <div className="page-heading">
@@ -191,51 +188,9 @@ export function SeriesLibrary() {
             </select>
           </div>
           {guide.data && (
-            <section className="official-papers-section" aria-labelledby="official-papers-title">
-              <div className="section-heading">
-                <div>
-                  <span className="eyebrow">{tr("OFFICIAL SOURCE PAPERS")}</span>
-                  <h2 id="official-papers-title">{tr("Full BSEB model papers")}</h2>
-                  <p className="muted">
-                    {tr("Open the complete subject paper published by BSEB. These links currently reference the 2026 model-paper set; check the board portal for a newer session.")}
-                  </p>
-                </div>
-                <a
-                  className="button subtle"
-                  href={user.classLevel === "10"
-                    ? "https://biharboardonline.com/modelpapermatric.html"
-                    : "https://biharboardonline.com/modelpaperinter.html"}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {tr("All official papers")} ↗
-                </a>
-              </div>
-              <div className="official-papers-grid">
-                {officialPapers.map((subject) => {
-                  const isPDF = /\.pdf(?:$|#)/i.test(subject.sourceUrl);
-                  return (
-                    <article className="official-paper-card" key={subject.key}>
-                      <div className="row between">
-                        <span className="tag orange-tag">{tr("Class {0}", [subject.classLevel])}</span>
-                        <span className="small muted">{subject.referenceYear || 2026}</span>
-                      </div>
-                      <h3>{tr(subject.name)}</h3>
-                      <p className="small muted">{tr(subject.role)}</p>
-                      <p>{subject.theoryMarks != null
-                        ? tr("{0} theory marks", [subject.theoryMarks])
-                        : tr("Check the official paper for marks and pattern")}</p>
-                      <p className="small">{tr(subject.paperQuestionLabel || "Refer to the official paper for question structure.")}</p>
-                      <a className="button primary" href={subject.sourceUrl} target="_blank" rel="noreferrer">
-                        {isPDF ? tr("Open full paper PDF") : tr("Find paper on BSEB portal")} ↗
-                      </a>
-                    </article>
-                  );
-                })}
-              </div>
-              <p className="small muted official-paper-note">
-                {tr("Source note: these are official PDF references, not interactive CBT tests or verified answer keys. The 2027/current-session paper pattern must not be inferred from a 2026 PDF. Full interactive mocks require question-by-question extraction, answer-key validation and staff approval before publishing.")}
-              </p>
+            <section className="panel cbt-intro" aria-label={tr("Interactive CBT practice")}>
+              <h2>{tr("Practice with interactive CBT mocks")}</h2>
+              <p className="muted">{tr("Official-paper PDF links have been removed from this student library. BSEB papers are being converted into timed interactive tests. Open a subject series and choose CBT mocks; only reviewed and published tests will appear.")}</p>
             </section>
           )}
           {guide.data && (
@@ -257,13 +212,7 @@ export function SeriesLibrary() {
                     {guide.data.subjects.map((s) => (
                       <tr key={s.key}>
                         <td>
-                          <a
-                            href={s.sourceUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {tr(s.name)}
-                          </a>
+                          <span>{tr(s.name)}</span>
                           <small className="muted">{tr(s.role)}</small>
                         </td>
                         <td>{s.theoryMarks ?? tr("Check source")}</td>
@@ -274,13 +223,6 @@ export function SeriesLibrary() {
                   </tbody>
                 </table>
               </div>
-              <a
-                href={guide.data.schemeSource}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {tr("Official subject scheme")}
-              </a>
             </details>
           )}
         </>
@@ -325,19 +267,34 @@ export function SeriesLibrary() {
                     {tr("Tests are being prepared. No published test yet.")}
                   </p>
                 )}
-                <button
-                  className="button primary"
-                  onClick={() => {
-                    setMode("");
-                    setKind("");
-                    setAccess("");
-                    setQuery("");
-                    setSearch("");
-                    setParams({ series: g.id });
-                  }}
-                >
-                  {tr("View tests")}
-                </button>
+                <div className="row" style={{ gap: "0.5rem", flexWrap: "wrap" }}>
+                  <button
+                    className="button subtle"
+                    onClick={() => {
+                      setMode("");
+                      setKind("");
+                      setAccess("");
+                      setQuery("");
+                      setSearch("");
+                      setParams({ series: g.id });
+                    }}
+                  >
+                    {tr("All tests")}
+                  </button>
+                  <button
+                    className="button primary"
+                    onClick={() => {
+                      setMode("CBT");
+                      setKind("");
+                      setAccess("");
+                      setQuery("");
+                      setSearch("");
+                      setParams({ series: g.id });
+                    }}
+                  >
+                    {tr("CBT mocks")}
+                  </button>
+                </div>
               </article>
             ))}
         </div>
