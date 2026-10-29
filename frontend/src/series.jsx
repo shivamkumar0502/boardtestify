@@ -279,7 +279,7 @@ export function SeriesLibrary() {
                       setParams({ series: g.id });
                     }}
                   >
-                    {tr("All tests")}
+                    {tr("View tests")}
                   </button>
                   <button
                     className="button primary"
