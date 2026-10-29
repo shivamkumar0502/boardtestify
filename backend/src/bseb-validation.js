@@ -25,6 +25,13 @@ export function validateBsebDraft({ questions, source }) {
     ? source.sections.reduce((total, section) => total + (Number(section.offered) || 0), 0)
     : null;
   const extractedQuestions = questions.length;
+  const extractedListedMarks = questions.reduce(
+    (total, question) => total + (Number(question.data?.maximumMarks) || 0),
+    0,
+  );
+  const expectedTheoryMarks = Number.isFinite(Number(source.theoryMarks))
+    ? Number(source.theoryMarks)
+    : null;
   const countDifference = expectedOfferedQuestions === null
     ? null
     : extractedQuestions - expectedOfferedQuestions;
@@ -48,6 +55,8 @@ export function validateBsebDraft({ questions, source }) {
   return {
     status: "REVIEW_REQUIRED",
     extractedQuestions,
+    extractedListedMarks,
+    expectedTheoryMarks,
     expectedOfferedQuestions,
     countDifference,
     questionTypes,
