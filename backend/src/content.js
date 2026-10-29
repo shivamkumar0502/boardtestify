@@ -203,6 +203,7 @@ content.get("/admin/questions", editors, async (req, res) => {
         "SHORT_ANSWER",
         "LONG_ANSWER",
         "NUMERICAL",
+        "IMAGE_BASED",
       ])
       .parse(req.query.type);
   if (req.query.status)
