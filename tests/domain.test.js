@@ -191,3 +191,18 @@ test("spreadsheet formula injection export defense", () => {
     assert.ok(sanitizeExport(value).startsWith("'"));
   assert.equal(sanitizeExport("Normal text"), "Normal text");
 });
+
+
+test("image-based MCQs require a validated image and score like single-choice questions", () => {
+  const imageQuestion = questionSchema.parse({
+    ...q,
+    type: "IMAGE_BASED",
+    imageKey: "question-images/example.jpeg",
+    options: [{ id: "a", text: "Correct" }, { id: "b", text: "Incorrect" }],
+    correct: ["a"],
+  });
+  assert.equal(scoreObjective(imageQuestion, ["a"]), imageQuestion.maximumMarks);
+  assert.equal(scoreObjective(imageQuestion, ["b"]), -imageQuestion.negativeMarks);
+  assert.equal(questionSchema.safeParse({ ...imageQuestion, imageKey: undefined }).success, false);
+  assert.equal(questionSchema.safeParse({ ...imageQuestion, correct: ["a", "b"] }).success, false);
+});
