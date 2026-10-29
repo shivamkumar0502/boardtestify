@@ -46,6 +46,45 @@ test("personal study plan requires authentication and finalized tagged performan
     });
     assert.equal(response.status, 422);
     assert.match((await response.json()).message, /finalize a test/i);
+
+    await m.StudyPlan.create({
+      userId: String(user._id),
+      language: "en",
+      plan: {
+        title: "Saved plan",
+        summary: "Test summary",
+        days: [{ day: 1, tasks: [{ goal: "Revise", activity: "READ_CONCEPT", durationMinutes: 20, areaId: "chapter-1" }] }],
+      },
+      completedTasks: [],
+      generatedAt: new Date(),
+    });
+    const current = await fetch(`${url}/current`, {
+      headers: { Authorization: `Bearer ${accessToken(user)}` },
+    });
+    assert.equal(current.status, 200);
+    assert.equal((await current.json()).plan.title, "Saved plan");
+
+    const taskUpdate = await fetch(`${url}/task`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken(user)}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ day: 1, taskIndex: 0, completed: true }),
+    });
+    assert.equal(taskUpdate.status, 200);
+    assert.deepEqual((await taskUpdate.json()).completedTasks, ["day:1:task:0"]);
+
+    const uncheck = await fetch(`${url}/task`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken(user)}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ day: 1, taskIndex: 0, completed: false }),
+    });
+    assert.equal(uncheck.status, 200);
+    assert.deepEqual((await uncheck.json()).completedTasks, []);
   } finally {
     if (server) await new Promise((resolve) => server.close(resolve));
     await mongoose.disconnect();
