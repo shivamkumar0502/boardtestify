@@ -128,7 +128,7 @@ bsebPaperImport.post("/admin/bseb-papers/import", async (req, res) => {
     await rm(dir, { recursive: true, force: true });
   }
 
-  const pages = text.split("\f").map((page) => page.trim()).filter(Boolean);
+  const pages = text.split("\f").map((page, index) => ({ number: index + 1, text: page.trim() })).filter((page) => page.text);
   const chunks = [];
   let current = "";
   for (let i = 0; i < pages.length; i++) {
