@@ -19,7 +19,7 @@ test("paste parser rejects duplicate letters, oversized imports and invalid keys
   for (const text of [
     "1. Q\nA) One\nA) Two",
     "1. Q\nA) One\nB) Two\nAnswer: D",
-    Array.from({ length: 11 }, (_, i) => `${i + 1}. Q\nA) One\nB) Two`).join(
+    Array.from({ length: 101 }, (_, i) => `${i + 1}. Q\nA) One\nB) Two`).join(
       "\n",
     ),
     "A) no question",
@@ -57,4 +57,14 @@ test("book options may share a line with the question and use Hindi or English m
   );
   assert.deepEqual(rows[1].correct, ["b"]);
   assert.throws(() => parsePastedMCQ("1. Q A) First A) Repeated"));
+});
+
+test("paste parser accepts a full paper-sized set of 100 questions", () => {
+  const text = Array.from(
+    { length: 100 },
+    (_, i) => `${i + 1}. Question ${i + 1}\nA) Option one\nB) Option two\nC) Option three\nD) Option four\nAnswer: A`,
+  ).join("\n\n");
+  const rows = parsePastedMCQ(text);
+  assert.equal(rows.length, 100);
+  assert.deepEqual(rows[99].correct, ["a"]);
 });
