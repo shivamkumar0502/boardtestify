@@ -65,7 +65,22 @@ management.get("/announcements", async (req, res) => {
   );
 });
 management.get("/resources", async (req, res) => {
-  const filter = { classLevel: req.user.classLevel };
+  // Keep study references aligned with the student's saved class and stream.
+  // Class 12 students should not see generic or other-stream subject resources.
+  const subjects = await Academic.find({
+    kind: "SUBJECT",
+    active: true,
+    classLevel: req.user.classLevel,
+    stream: req.user.stream,
+  })
+    .select("name")
+    .limit(100)
+    .lean();
+  const names = subjects.map((subject) => subject.name);
+  const filter = {
+    classLevel: req.user.classLevel,
+    subject: { $in: names },
+  };
   res.json(await Resource.find(filter).sort({ subject: 1 }).limit(100).lean());
 });
 management.get("/admin/announcements", admins, async (_req, res) =>
