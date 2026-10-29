@@ -891,6 +891,12 @@ export function Result() {
                 ? tr("Provisional · evaluation in progress")
                 : tr("Final result")}
             </span>
+            {!r.provisional && r.passStatus && (
+              <span className="tag">
+                {r.passStatus === "PASS" ? tr("Passing threshold met") : tr("Below passing threshold")}
+                {r.minimumPassingMarks != null && tr(" · minimum {0}", [r.minimumPassingMarks])}
+              </span>
+            )}
             <div className="result-score">
               {tr(r.awardedMarks)}
               <span>
