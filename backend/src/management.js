@@ -159,6 +159,9 @@ export async function validatePatternForTest(d, questions) {
   }).lean();
   assert(p, 400, "Pattern must be approved");
   const pattern = p.data;
+  // Copy the approved threshold into the test data so each attempt keeps an immutable snapshot.
+  if (pattern.minimumPassingMarks !== undefined)
+    d.minimumPassingMarks = pattern.minimumPassingMarks;
   assert(
     ["session", "classLevel", "stream", "subjectId"].every(
       (k) => pattern.academic[k] === d.academic[k],
