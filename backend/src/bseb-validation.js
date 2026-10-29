@@ -57,6 +57,7 @@ export function validateBsebDraft({ questions, source }) {
     extractedQuestions,
     extractedListedMarks,
     expectedTheoryMarks,
+    expectedDurationMinutes: source.durationMinutes ?? null,
     expectedOfferedQuestions,
     countDifference,
     questionTypes,
