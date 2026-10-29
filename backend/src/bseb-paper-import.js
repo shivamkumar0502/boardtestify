@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, writeFile, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Router } from "express";
@@ -10,6 +10,7 @@ import { Academic, Audit, QuestionModel, TestModel } from "./models.js";
 import { auth, allow, assert, hash } from "./lib.js";
 import { bsebSubjects } from "./bseb-catalog.js";
 import { modelJSON } from "./evaluation.js";
+import { env } from "./config.js";
 import { sharedLimit, concurrencyGate } from "./reliability.js";
 
 const run = promisify(execFile);
@@ -124,6 +125,7 @@ bsebPaperImport.post("/admin/bseb-papers/import", async (req, res) => {
 
   const dir = await mkdtemp(join(tmpdir(), "bt-bseb-paper-"));
   let text;
+  let visionPages = [];
   try {
     const file = join(dir, "official.pdf");
     await writeFile(file, bytes, { mode: 0o600 });
@@ -134,7 +136,18 @@ bsebPaperImport.post("/admin/bseb-papers/import", async (req, res) => {
     assert(Number.isInteger(pageCount) && pageCount > 0 && pageCount <= 60, 413, "PDF must contain 1–60 pages");
     const { stdout: textBytes } = await limitedRun("pdftotext", ["-layout", "-enc", "UTF-8", file, "-"]);
     text = textBytes.toString("utf8").replace(/\u0000/g, "").trim();
-    assert(text.length >= 100, 422, "PDF has no usable text layer. Scanned-paper OCR is not enabled in this import yet.");
+    if (text.length < 100) {
+      assert(env.AI_API_KEY && env.AI_VISION_ENABLED === "true", 422, "This PDF appears scanned. Enable the configured AI vision provider to extract it.");
+      assert(pageCount <= 30, 413, "Scanned PDFs are limited to 30 pages per import to control processing cost.");
+      for (let page = 1; page <= pageCount; page++) {
+        const output = join(dir, "scan-" + page);
+        await limitedRun("pdftoppm", ["-f", String(page), "-l", String(page), "-singlefile", "-scale-to", "1400", "-jpeg", "-jpegopt", "quality=78", file, output]);
+        const imageBytes = await readFile(output + ".jpg");
+        assert(imageBytes.length > 0 && imageBytes.length <= 1800000, 413, "Scanned page is too large to process safely");
+        visionPages.push({ number: page, url: "data:image/jpeg;base64," + imageBytes.toString("base64") });
+      }
+    }
+    assert(text.length >= 100 || visionPages.length > 0, 422, "PDF has no readable text or pages for vision extraction.");
     assert(text.length <= 250000, 413, "PDF text is too large for safe import");
   } catch (error) {
     if (error.status) throw error;
