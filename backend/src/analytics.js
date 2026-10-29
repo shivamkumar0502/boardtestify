@@ -143,12 +143,31 @@ analytics.get("/analytics/detailed", async (req, res) => {
     month: "2-digit",
     day: "2-digit",
   }).format(date);
-  const activeDays = new Set(
-    rows
-      .map((attempt) => attempt.submittedAt || attempt.createdAt || attempt.startedAt)
-      .filter(Boolean)
-      .map((date) => dayKey(new Date(date))),
-  );
+  const activityDates = await Attempt.aggregate([
+    { $match: { userId: String(req.user._id), status: { $ne: "ACTIVE" } } },
+    {
+      $project: {
+        activityDate: {
+          $ifNull: ["$submittedAt", { $ifNull: ["$createdAt", "$startedAt"] }],
+        },
+      },
+    },
+    { $match: { activityDate: { $ne: null } } },
+    {
+      $project: {
+        day: {
+          $dateToString: {
+            format: "%Y-%m-%d",
+            date: "$activityDate",
+            timezone: "Asia/Kolkata",
+          },
+        },
+      },
+    },
+    { $group: { _id: "$day" } },
+    { $sort: { _id: 1 } },
+  ]);
+  const activeDays = new Set(activityDates.map((row) => row._id));
   const today = dayKey(new Date());
   const shiftDay = (key, amount) => {
     const [year, month, day] = key.split("-").map(Number);
