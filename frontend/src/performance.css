@@ -80,3 +80,24 @@
   .streak-day > span:first-child { font-size: 10px; }
   .streak-day > strong { width: 29px; height: 29px; font-size: 12px; }
 }
+
+.mistakes-panel { overflow: hidden; }
+.mistakes-panel > div:first-child p { max-width: 700px; }
+.mistake-list { display: grid; gap: 14px; }
+.mistake-card { min-width: 0; display: grid; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; }
+.mistake-card h3, .mistake-card p, .mistake-card li { overflow-wrap: anywhere; }
+.mistake-card h3 { margin: 0; font-size: 16px; line-height: 1.5; }
+.mistake-card p { margin: 0; line-height: 1.55; }
+.mistake-meta { gap: 12px; align-items: flex-start; }
+.mistake-meta .tag { white-space: normal; overflow-wrap: anywhere; }
+.mistake-marks { flex: 0 0 auto; white-space: nowrap; font-size: 13px; color: var(--accent); }
+.mistake-card ul { margin: 8px 0 0; padding-left: 22px; display: grid; gap: 5px; }
+.mistake-card details { border-top: 1px solid var(--line); padding-top: 12px; }
+.mistake-card summary { cursor: pointer; font-weight: 650; }
+.mistake-reference { margin-top: 12px; display: grid; gap: 6px; }
+.mistake-card .button { justify-self: start; }
+@media (max-width: 520px) {
+  .mistake-card { padding: 13px; }
+  .mistake-meta { flex-direction: column; }
+  .mistake-card .button { width: 100%; justify-content: center; }
+}
