@@ -331,6 +331,7 @@ export const patternSchema = z
     durationMinutes: z.number().int().min(1).max(360),
     readingMinutes: z.number().int().min(0).max(30).default(0),
     totalMarks: z.number().positive().max(1000),
+    minimumPassingMarks: z.number().min(0).max(1000).optional(),
     sections: z
       .array(
         z.object({
@@ -360,6 +361,8 @@ export const patternSchema = z
       .max(10),
   })
   .superRefine((p, c) => {
+    if (p.minimumPassingMarks !== undefined && p.minimumPassingMarks > p.totalMarks)
+      c.addIssue({ code: "custom", message: "Minimum passing marks cannot exceed total marks" });
     if (
       p.sections.some((s) => s.answerCount > s.offered) ||
       p.sections.reduce((n, s) => n + s.offered, 0) > 200
