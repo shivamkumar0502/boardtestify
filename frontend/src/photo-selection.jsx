@@ -34,11 +34,12 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
       y: Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)),
     };
   }
-  function move(e) {
-    if (!anchor.current || disabled) return;
-    const p = point(e),
-      a = anchor.current;
-    if (Math.abs(a.x - p.x) < 0.02 || Math.abs(a.y - p.y) < 0.02) return;
+  function applySelection(a, p) {
+    if (
+      Math.abs(a.x - p.x) < 0.02 &&
+      Math.abs(a.y - p.y) < 0.02
+    )
+      return;
     onChange({
       crop: {
         x: Math.min(a.x, p.x),
@@ -47,6 +48,10 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
         height: Math.max(0.01, Math.abs(a.y - p.y)),
       },
     });
+  }
+  function move(e) {
+    if (!anchor.current || disabled) return;
+    applySelection(anchor.current, point(e));
   }
   return (
     <>
@@ -75,7 +80,11 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
         }}
         onPointerMove={move}
         onPointerUp={(e) => {
-          move(e);
+          if (anchor.current && !disabled)
+            applySelection(anchor.current, point(e));
+          anchor.current = null;
+        }}
+        onLostPointerCapture={() => {
           anchor.current = null;
         }}
         onPointerCancel={() => {
