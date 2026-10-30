@@ -3,8 +3,7 @@ import { tr } from "@boardtestify/i18n";
 import { fullPhoto, uprightPhoto } from "./ocr-image";
 export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
   const canvasRef = useRef(null),
-    anchor = useRef(null),
-;
+    anchor = useRef(null);
   const [error, setError] = useState(""),
     [ready, setReady] = useState(false);
   useEffect(() => {
