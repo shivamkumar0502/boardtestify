@@ -2819,3 +2819,323 @@ pre {
 .official-paper-note { max-width: 1000px; line-height: 1.6; }
 @media (max-width: 900px) { .official-papers-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 560px) { .official-papers-grid { grid-template-columns: minmax(0, 1fr); } .official-paper-card { padding: 14px; } .official-papers-section .section-heading > .button { width: 100%; justify-content: center; } }
+
+
+/* Mobile-first student and admin workspace refinements */
+@media (max-width: 1024px) {
+  .app-main {
+    width: 100%;
+    max-width: 100%;
+    padding: 24px clamp(16px, 3vw, 30px);
+  }
+  .app-header {
+    padding-inline: clamp(16px, 3vw, 28px);
+  }
+  .series-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .series-stats {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .series-summary {
+    gap: 14px;
+  }
+  .admin-row,
+  .toolbar {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 850px) {
+  .app-shell,
+  .workspace {
+    min-width: 0;
+  }
+  .app-main {
+    padding: 20px 18px calc(28px + env(safe-area-inset-bottom));
+  }
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: 25;
+    min-height: 62px;
+    height: auto;
+    padding-block: 10px;
+    background: #0e0e10;
+  }
+  .page-heading {
+    margin-bottom: 22px;
+  }
+  .page-heading h1 {
+    font-size: clamp(24px, 5vw, 30px);
+    overflow-wrap: anywhere;
+  }
+  .test-grid,
+  .grid-three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .test-card {
+    min-width: 0;
+    padding: 17px;
+  }
+  .test-card h3 {
+    margin-top: 16px;
+    overflow-wrap: anywhere;
+  }
+  .series-hero {
+    padding: 20px;
+  }
+  .series-stats {
+    gap: 18px;
+  }
+  .series-stats strong {
+    font-size: 25px;
+  }
+  .series-card .row,
+  .series-actions {
+    min-width: 0;
+  }
+  .series-card .button,
+  .series-actions .button {
+    min-height: 44px;
+  }
+  .series-kind-tabs,
+  .section-tabs {
+    scrollbar-width: thin;
+    overscroll-behavior-x: contain;
+  }
+  .exam-header {
+    position: sticky;
+    top: 0;
+    z-index: 35;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    gap: 8px 12px;
+  }
+  .exam-header > .row {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .exam-subbar {
+    padding-inline: 14px;
+    min-height: 42px;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+  }
+  .exam-layout {
+    display: block;
+    min-height: 0;
+  }
+  .exam-question {
+    padding: 0 16px 22px;
+  }
+  .section-tabs {
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+  .section-tabs button {
+    min-height: 46px;
+    padding-block: 12px;
+  }
+  .question-top {
+    align-items: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .question-text {
+    font-size: clamp(17px, 3.5vw, 21px);
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+  }
+  .option {
+    min-height: 56px;
+    padding: 13px;
+    gap: 11px;
+  }
+  .exam-controls {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    margin: 24px -16px 0;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: #101012f2;
+    backdrop-filter: blur(14px);
+    border-top: 1px solid var(--line);
+    gap: 10px;
+  }
+  .exam-controls > .row {
+    margin-left: 0;
+    flex: 1 1 auto;
+    justify-content: flex-end;
+  }
+  .exam-controls .button {
+    min-height: 44px;
+  }
+  .exam-palette.visible {
+    position: fixed;
+    inset: auto 10px calc(10px + env(safe-area-inset-bottom));
+    width: auto;
+    max-height: min(68dvh, 560px);
+    overflow: auto;
+    z-index: 60;
+    padding: 18px;
+    border: 1px solid #41414b;
+    border-radius: 16px;
+    background: #151518;
+  }
+  .palette-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .answer-upload-actions {
+    flex-wrap: wrap;
+  }
+  .answer-upload-actions .button,
+  .upload-picker {
+    min-height: 44px;
+  }
+  .admin-row {
+    gap: 10px;
+  }
+  .admin-row > *,
+  .toolbar > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .modal {
+    width: min(100% - 24px, 560px);
+    max-height: calc(100dvh - 24px - env(safe-area-inset-top));
+    overflow: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .app-main {
+    padding: 16px 12px calc(24px + env(safe-area-inset-bottom));
+  }
+  .page-heading {
+    margin-bottom: 18px;
+  }
+  .page-heading h1 {
+    font-size: 24px;
+    line-height: 1.2;
+  }
+  .page-heading p {
+    line-height: 1.55;
+  }
+  .panel,
+  .series-hero,
+  .series-summary {
+    padding: 16px;
+    border-radius: 12px;
+  }
+  .test-grid,
+  .grid-three {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .test-card {
+    padding: 16px;
+  }
+  .test-card > p {
+    min-height: 0;
+  }
+  .series-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .series-stats > * {
+    min-width: 0;
+  }
+  .series-card .row.between {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .series-card .row[style] {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+  .series-card .button,
+  .series-actions .button,
+  .toolbar .button {
+    width: 100%;
+    justify-content: center;
+  }
+  .toolbar {
+    align-items: stretch;
+    gap: 10px;
+  }
+  .toolbar > input,
+  .toolbar > select {
+    width: 100%;
+    min-width: 0;
+  }
+  .exam-header {
+    padding-inline: 10px;
+  }
+  .exam-brand small {
+    display: none;
+  }
+  .timer {
+    font-size: 15px;
+  }
+  .exam-question {
+    padding-inline: 12px;
+  }
+  .question-top .row {
+    flex-wrap: wrap;
+  }
+  .question-text {
+    font-size: 17px;
+  }
+  .option {
+    align-items: flex-start;
+    font-size: 14px;
+  }
+  .exam-controls {
+    margin-inline: -12px;
+    padding-inline: 12px;
+  }
+  .exam-controls > .row {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .exam-controls > .row .button {
+    flex: 1 1 0;
+  }
+  .exam-controls > .button {
+    flex: 1 1 100%;
+  }
+  .palette-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .answer-label textarea,
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  .auth-layout > main {
+    padding: 18px 14px;
+  }
+  .stat {
+    padding: 16px 12px;
+  }
+  .stat strong {
+    font-size: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar {
+    transition: none;
+  }
+}
