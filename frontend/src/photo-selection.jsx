@@ -28,18 +28,16 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
     };
   }, [file, rotation]);
   function point(e) {
-    const r = e.currentTarget.getBoundingClientRect();
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect || !rect.width || !rect.height) return null;
     return {
-      x: Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)),
-      y: Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)),
+      x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)),
+      y: Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height)),
     };
   }
   function applySelection(a, p) {
-    if (
-      Math.abs(a.x - p.x) < 0.02 &&
-      Math.abs(a.y - p.y) < 0.02
-    )
-      return;
+    if (!a || !p) return;
+    if (Math.hypot(a.x - p.x, a.y - p.y) < 0.015) return;
     onChange({
       crop: {
         x: Math.min(a.x, p.x),
@@ -74,8 +72,11 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
           cursor: disabled ? "wait" : "crosshair",
         }}
         onPointerDown={(e) => {
-          if (disabled || !ready) return;
-          anchor.current = point(e);
+          if (disabled || !ready || (e.pointerType === "mouse" && e.button !== 0)) return;
+          const start = point(e);
+          if (!start) return;
+          anchor.current = start;
+          e.preventDefault();
         }}
         onPointerMove={move}
         onPointerUp={(e) => {
@@ -85,6 +86,14 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
         }}
         onPointerCancel={() => {
           anchor.current = null;
+        }}
+        onClick={(e) => {
+          if (disabled || !ready || e.detail !== 0) return;
+          const rect = canvasRef.current?.getBoundingClientRect();
+          if (!rect) return;
+          const start = { x: 0.02, y: 0.05 };
+          const end = { x: 0.65, y: 0.85 };
+          applySelection(start, end);
         }}
       >
         <canvas ref={canvasRef} style={{ width: "100%", display: "block" }} />
