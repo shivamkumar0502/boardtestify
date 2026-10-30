@@ -48,12 +48,7 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
       width: Math.max(0.01, dx),
       height: Math.max(0.01, dy),
     };
-    selectionRef.current = next;
     onChange({ crop: next });
-  }
-  function move(e) {
-    if (!anchor.current || disabled) return;
-    applySelection(anchor.current, point(e));
   }
   return (
     <>
