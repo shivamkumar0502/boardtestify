@@ -4,7 +4,8 @@ import { fullPhoto, uprightPhoto } from "./ocr-image";
 export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
   const canvasRef = useRef(null),
     anchor = useRef(null),
-    mouseAnchor = useRef(null);
+    mouseAnchor = useRef(null),
+    selectionRef = useRef(null);
   const [error, setError] = useState(""),
     [ready, setReady] = useState(false);
   useEffect(() => {
@@ -38,15 +39,19 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
   }
   function applySelection(a, p) {
     if (!a || !p) return;
-    if (Math.hypot(a.x - p.x, a.y - p.y) < 0.015) return;
-    onChange({
-      crop: {
-        x: Math.min(a.x, p.x),
-        y: Math.min(a.y, p.y),
-        width: Math.max(0.01, Math.abs(a.x - p.x)),
-        height: Math.max(0.01, Math.abs(a.y - p.y)),
-      },
-    });
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect || rect.width < 1 || rect.height < 1) return;
+    const dx = Math.abs(a.x - p.x);
+    const dy = Math.abs(a.y - p.y);
+    if (Math.hypot(dx, dy) < 0.015) return;
+    const next = {
+      x: Math.min(a.x, p.x),
+      y: Math.min(a.y, p.y),
+      width: Math.max(0.01, dx),
+      height: Math.max(0.01, dy),
+    };
+    selectionRef.current = next;
+    onChange({ crop: next });
   }
   function move(e) {
     if (!anchor.current || disabled) return;
@@ -70,6 +75,7 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
           maxWidth: 700,
           lineHeight: 0,
           touchAction: "none",
+          userSelect: "none",
           cursor: disabled ? "wait" : "crosshair",
         }}
         onPointerDown={(e) => {
@@ -77,6 +83,7 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
           const start = point(e);
           if (!start) return;
           anchor.current = start;
+          try { e.currentTarget.setPointerCapture(e.pointerId); } catch {}
           e.preventDefault();
         }}
         onPointerMove={move}
@@ -84,13 +91,16 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
           if (anchor.current && !disabled)
             applySelection(anchor.current, point(e));
           anchor.current = null;
+          try { if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
         }}
-        onPointerCancel={() => {
+        onPointerCancel={(e) => {
           anchor.current = null;
+          try { if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId); } catch {}
         }}
         onMouseDown={(e) => {
           if (disabled || !ready || e.button !== 0) return;
           mouseAnchor.current = point(e);
+          e.preventDefault();
         }}
         onMouseMove={(e) => {
           if (mouseAnchor.current && !disabled)
@@ -102,7 +112,7 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
           mouseAnchor.current = null;
         }}
         onMouseLeave={() => {
-          mouseAnchor.current = null;
+          // Keep the active mouse drag until mouseup so a selection can finish outside the preview.
         }}
       >
         <canvas ref={canvasRef} style={{ width: "100%", display: "block" }} />
