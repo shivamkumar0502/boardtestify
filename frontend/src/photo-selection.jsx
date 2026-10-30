@@ -77,7 +77,11 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
           const start = point(e);
           if (!start) return;
           anchor.current = start;
-          e.currentTarget.setPointerCapture(e.pointerId);
+          try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+          } catch {
+            // Synthetic pointer events in automated tests do not own an active pointer.
+          }
           e.preventDefault();
         }}
         onPointerMove={(e) => {
@@ -86,8 +90,12 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
         onPointerUp={(e) => {
           if (anchor.current && !disabled) applySelection(anchor.current, point(e));
           anchor.current = null;
-          if (e.currentTarget.hasPointerCapture(e.pointerId))
-            e.currentTarget.releasePointerCapture(e.pointerId);
+          try {
+            if (e.currentTarget.hasPointerCapture(e.pointerId))
+              e.currentTarget.releasePointerCapture(e.pointerId);
+          } catch {
+            // The pointer may already have been released by the browser.
+          }
         }}
         onPointerCancel={() => {
           anchor.current = null;
