@@ -3,7 +3,8 @@ import { tr } from "@boardtestify/i18n";
 import { fullPhoto, uprightPhoto } from "./ocr-image";
 export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
   const canvasRef = useRef(null),
-    anchor = useRef(null);
+    anchor = useRef(null),
+    mouseAnchor = useRef(null);
   const [error, setError] = useState(""),
     [ready, setReady] = useState(false);
   useEffect(() => {
@@ -87,7 +88,22 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
         onPointerCancel={() => {
           anchor.current = null;
         }}
-
+        onMouseDown={(e) => {
+          if (disabled || !ready || e.button !== 0) return;
+          mouseAnchor.current = point(e);
+        }}
+        onMouseMove={(e) => {
+          if (mouseAnchor.current && !disabled)
+            applySelection(mouseAnchor.current, point(e));
+        }}
+        onMouseUp={(e) => {
+          if (mouseAnchor.current && !disabled)
+            applySelection(mouseAnchor.current, point(e));
+          mouseAnchor.current = null;
+        }}
+        onMouseLeave={() => {
+          mouseAnchor.current = null;
+        }}
       >
         <canvas ref={canvasRef} style={{ width: "100%", display: "block" }} />
         {ready && (
