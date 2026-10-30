@@ -87,14 +87,7 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
         onPointerCancel={() => {
           anchor.current = null;
         }}
-        onClick={(e) => {
-          if (disabled || !ready || e.detail !== 0) return;
-          const rect = canvasRef.current?.getBoundingClientRect();
-          if (!rect) return;
-          const start = { x: 0.02, y: 0.05 };
-          const end = { x: 0.65, y: 0.85 };
-          applySelection(start, end);
-        }}
+
       >
         <canvas ref={canvasRef} style={{ width: "100%", display: "block" }} />
         {ready && (
