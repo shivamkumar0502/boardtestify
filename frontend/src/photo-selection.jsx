@@ -3,8 +3,8 @@ import { tr } from "@boardtestify/i18n";
 import { fullPhoto, uprightPhoto } from "./ocr-image";
 export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
   const canvasRef = useRef(null),
-    anchor = useRef(null),
-    mouseAnchor = useRef(null);
+    previewRef = useRef(null),
+    anchor = useRef(null);
   const [error, setError] = useState(""),
     [ready, setReady] = useState(false);
   useEffect(() => {
@@ -29,7 +29,7 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
     };
   }, [file, rotation]);
   function point(e) {
-    const rect = canvasRef.current?.getBoundingClientRect();
+    const rect = previewRef.current?.getBoundingClientRect();
     if (!rect || !rect.width || !rect.height) return null;
     return {
       x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)),
@@ -38,19 +38,17 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
   }
   function applySelection(a, p) {
     if (!a || !p) return;
-    if (Math.hypot(a.x - p.x, a.y - p.y) < 0.015) return;
-    onChange({
-      crop: {
-        x: Math.min(a.x, p.x),
-        y: Math.min(a.y, p.y),
-        width: Math.max(0.01, Math.abs(a.x - p.x)),
-        height: Math.max(0.01, Math.abs(a.y - p.y)),
-      },
-    });
-  }
-  function move(e) {
-    if (!anchor.current || disabled) return;
-    applySelection(anchor.current, point(e));
+    if (!previewRef.current) return;
+    const dx = Math.abs(a.x - p.x);
+    const dy = Math.abs(a.y - p.y);
+    if (Math.hypot(dx, dy) < 0.015) return;
+    const next = {
+      x: Math.min(a.x, p.x),
+      y: Math.min(a.y, p.y),
+      width: Math.max(0.01, dx),
+      height: Math.max(0.01, dy),
+    };
+    onChange({ crop: next });
   }
   return (
     <>
@@ -61,6 +59,7 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
       </p>
       {error && <p role="alert">{tr(error)}</p>}
       <div
+        ref={previewRef}
         role="group"
         aria-label={tr("Photo crop preview")}
         aria-busy={!ready}
@@ -70,6 +69,7 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
           maxWidth: 700,
           lineHeight: 0,
           touchAction: "none",
+          userSelect: "none",
           cursor: disabled ? "wait" : "crosshair",
         }}
         onPointerDown={(e) => {
@@ -77,32 +77,31 @@ export function PhotoSelection({ file, rotation, crop, onChange, disabled }) {
           const start = point(e);
           if (!start) return;
           anchor.current = start;
+          try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+          } catch {
+            // Synthetic pointer events in automated tests do not own an active pointer.
+          }
           e.preventDefault();
         }}
-        onPointerMove={move}
+        onPointerMove={(e) => {
+          if (anchor.current && !disabled) applySelection(anchor.current, point(e));
+        }}
         onPointerUp={(e) => {
-          if (anchor.current && !disabled)
-            applySelection(anchor.current, point(e));
+          if (anchor.current && !disabled) applySelection(anchor.current, point(e));
           anchor.current = null;
+          try {
+            if (e.currentTarget.hasPointerCapture(e.pointerId))
+              e.currentTarget.releasePointerCapture(e.pointerId);
+          } catch {
+            // The pointer may already have been released by the browser.
+          }
         }}
         onPointerCancel={() => {
           anchor.current = null;
         }}
-        onMouseDown={(e) => {
-          if (disabled || !ready || e.button !== 0) return;
-          mouseAnchor.current = point(e);
-        }}
-        onMouseMove={(e) => {
-          if (mouseAnchor.current && !disabled)
-            applySelection(mouseAnchor.current, point(e));
-        }}
-        onMouseUp={(e) => {
-          if (mouseAnchor.current && !disabled)
-            applySelection(mouseAnchor.current, point(e));
-          mouseAnchor.current = null;
-        }}
-        onMouseLeave={() => {
-          mouseAnchor.current = null;
+        onLostPointerCapture={() => {
+          anchor.current = null;
         }}
       >
         <canvas ref={canvasRef} style={{ width: "100%", display: "block" }} />

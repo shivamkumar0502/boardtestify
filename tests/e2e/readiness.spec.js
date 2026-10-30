@@ -417,12 +417,54 @@ test("real local photo OCR works without paid provider and produces editable MCQ
   await expect(preview).toHaveAttribute("aria-busy", "false");
   await preview.scrollIntoViewIfNeeded();
   const box = await preview.boundingBox();
-  await page.mouse.move(box.x + box.width * 0.02, box.y + box.height * 0.05);
-  await page.mouse.down();
-  await page.mouse.move(box.x + box.width * 0.65, box.y + box.height * 0.85, {
-    steps: 5,
-  });
-  await page.mouse.up();
+  const start = {
+    x: box.x + box.width * 0.02,
+    y: box.y + box.height * 0.05,
+  };
+  const end = {
+    x: box.x + box.width * 0.65,
+    y: box.y + box.height * 0.85,
+  };
+  if (info.project.name === "mobile-web") {
+    // Mobile projects emulate touch input; send a touch PointerEvent sequence
+    // instead of relying on Playwright's mouse device in a touch context.
+    await preview.evaluate(
+      (element, points) => {
+        const dispatch = (type, point, buttons) =>
+          element.dispatchEvent(
+            new PointerEvent(type, {
+              bubbles: true,
+              cancelable: true,
+              pointerId: 7,
+              pointerType: "touch",
+              isPrimary: true,
+              button: type === "pointerdown" ? 0 : -1,
+              buttons,
+              clientX: point.x,
+              clientY: point.y,
+            }),
+          );
+        dispatch("pointerdown", points.start, 1);
+        for (let step = 1; step <= 5; step++) {
+          dispatch(
+            "pointermove",
+            {
+              x: points.start.x + ((points.end.x - points.start.x) * step) / 5,
+              y: points.start.y + ((points.end.y - points.start.y) * step) / 5,
+            },
+            1,
+          );
+        }
+        dispatch("pointerup", points.end, 0);
+      },
+      { start, end },
+    );
+  } else {
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(end.x, end.y, { steps: 5 });
+    await page.mouse.up();
+  }
   await expect(preview).not.toHaveAttribute("data-selection-width", "1");
   await page
     .getByRole("button", { name: "Read photo for free", exact: true })
