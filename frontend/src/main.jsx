@@ -1,6 +1,4 @@
-import { SeriesLibrary } from "./series";
-import { StudyHub } from "./study-hub";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, lazy, Suspense, useContext, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   BrowserRouter,
@@ -30,16 +28,17 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { api, request, setToken } from "./api";
-import { Exam, Result } from "./test";
-import { Admin } from "./admin";
-import { Performance } from "./performance";
-import {
-  AnnouncementsFeed,
-  ResourceLibrary,
-  AccountPanel,
-  BillingPanel,
-  PhoneLogin,
-} from "./student-extras";
+const SeriesLibrary = lazy(() => import("./series").then((m) => ({ default: m.SeriesLibrary })));
+const StudyHub = lazy(() => import("./study-hub").then((m) => ({ default: m.StudyHub })));
+const Exam = lazy(() => import("./test").then((m) => ({ default: m.Exam })));
+const Result = lazy(() => import("./test").then((m) => ({ default: m.Result })));
+const Admin = lazy(() => import("./admin").then((m) => ({ default: m.Admin })));
+const Performance = lazy(() => import("./performance").then((m) => ({ default: m.Performance })));
+const AnnouncementsFeed = lazy(() => import("./student-extras").then((m) => ({ default: m.AnnouncementsFeed })));
+const ResourceLibrary = lazy(() => import("./student-extras").then((m) => ({ default: m.ResourceLibrary })));
+const AccountPanel = lazy(() => import("./student-extras").then((m) => ({ default: m.AccountPanel })));
+const BillingPanel = lazy(() => import("./student-extras").then((m) => ({ default: m.BillingPanel })));
+const PhoneLogin = lazy(() => import("./student-extras").then((m) => ({ default: m.PhoneLogin })));
 import { getLanguage, setLanguage, useLanguage, tr } from "@boardtestify/i18n";
 import "./style.css";
 export const Context = createContext(null);
@@ -119,6 +118,7 @@ function App() {
         language,
       }}
     >
+      <Suspense fallback={<div className="loading" role="status">{tr("Loading page…")}</div>}>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Landing />} />
@@ -141,6 +141,7 @@ function App() {
           />
         </Routes>
       </BrowserRouter>
+      </Suspense>
     </Context.Provider>
   );
 }
