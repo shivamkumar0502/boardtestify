@@ -3182,3 +3182,24 @@ pre {
  .hub-metric { padding: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .hub-plan-progress span { transition: none; } }
+
+/* Contact footer */
+.site-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 32px;
+  padding: 42px clamp(20px, 5vw, 64px);
+  border-top: 1px solid var(--line);
+  color: #a1a1aa;
+}
+.footer-brand { display: grid; justify-items: start; gap: 12px; }
+.footer-brand p { font-size: 12px; }
+.footer-brand small { font-size: 11px; }
+.footer-contact, .footer-social { display: grid; justify-items: start; gap: 12px; }
+.site-footer h3 { color: #f4f4f5; font-size: 14px; }
+.site-footer a:not(.brand) { color: #a1a1aa; font-size: 12px; overflow-wrap: anywhere; }
+.site-footer a:not(.brand):hover { color: var(--accent); }
+@media (max-width: 650px) {
+  .site-footer { grid-template-columns: minmax(0, 1fr); gap: 28px; padding: 30px 20px; }
+}
