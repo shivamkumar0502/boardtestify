@@ -128,7 +128,7 @@ export const Attempt = make(
 export const StudyPlan = make(
   "StudyPlan",
   {
-    userId: { type: String, unique: true },
+    userId: {type: String},
     plan: Schema.Types.Mixed,
     completedTasks: { type: [String], default: [] },
     language: { type: String, enum: ["hi", "en"], default: "en" },
