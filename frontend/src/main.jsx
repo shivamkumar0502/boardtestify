@@ -1,4 +1,5 @@
 import { SeriesLibrary } from "./series";
+import { StudyHub } from "./study-hub";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -701,6 +702,7 @@ function Shell() {
                 "/app",
                 lang === "hi" ? "डैशबोर्ड" : "Overview",
               ],
+              [Target, "/app/study", "Study hub"],
               [
                 BookOpen,
                 "/app/tests",
@@ -777,6 +779,7 @@ function Shell() {
         <main className="app-main">
           <Routes>
             <Route index element={<Overview />} />
+            <Route path="study" element={<StudyHub />} />
             <Route path="tests" element={<Tests />} />
             <Route path="resources" element={<ResourceLibrary />} />
             <Route path="attempts" element={<Attempts />} />
