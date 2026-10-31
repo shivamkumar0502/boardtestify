@@ -3139,3 +3139,46 @@ pre {
     transition: none;
   }
 }
+
+
+/* Responsive student study hub */
+.study-hub { display: grid; gap: 22px; min-width: 0; }
+.hub-heading-row { align-items: center; gap: 16px; }
+.hub-welcome { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: clamp(20px, 4vw, 36px); overflow: hidden; background: radial-gradient(ellipse at 90% 20%, #f973161c, transparent 45%), var(--panel); }
+.hub-welcome > div:first-child { display: grid; gap: 13px; max-width: 660px; }
+.hub-welcome h2 { font-size: clamp(24px, 3vw, 34px); }
+.hub-welcome-mark { display: grid; place-items: center; width: 112px; height: 112px; flex: 0 0 auto; border: 1px solid #f9731638; border-radius: 28px; color: var(--accent); background: #f973160d; }
+.hub-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.hub-metric { display: grid; gap: 12px; min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.hub-metric > span { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+.hub-metric > span svg { color: var(--accent); }
+.hub-metric strong { font-size: clamp(22px, 2.5vw, 30px); overflow-wrap: anywhere; }
+.hub-feature-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.hub-card { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; min-width: 0; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+.hub-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 10px; background: #f9731615; color: var(--accent); }
+.hub-card h3 { overflow-wrap: anywhere; }
+.hub-card p { flex: 1; font-size: 13px; }
+.hub-card .button { width: 100%; white-space: normal; text-align: center; }
+.hub-plan, .hub-review { display: grid; gap: 18px; padding: clamp(16px, 3vw, 26px); min-width: 0; }
+.hub-plan-heading { align-items: center; gap: 18px; }
+.hub-plan-heading > div { display: grid; gap: 8px; }
+.hub-plan-heading .button { flex-shrink: 0; }
+.hub-plan-progress { height: 8px; overflow: hidden; border-radius: 99px; background: #29292e; }
+.hub-plan-progress span { display: block; height: 100%; border-radius: inherit; background: var(--accent); transition: width .2s ease; }
+.hub-task-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.hub-task { display: flex; align-items: flex-start; gap: 12px; min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: #151517; cursor: pointer; }
+.hub-task input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); flex: 0 0 auto; }
+.hub-task > span { display: grid; gap: 5px; line-height: 1.5; overflow-wrap: anywhere; }
+.hub-task small { color: var(--accent); font-weight: 700; letter-spacing: .5px; }
+.hub-review > .row { flex-wrap: wrap; gap: 12px; }
+@media (max-width: 1100px) { .hub-feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .hub-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 650px) {
+ .hub-heading-row, .hub-plan-heading { align-items: stretch; flex-direction: column; }
+ .hub-heading-row > button, .hub-plan-heading > .button { width: 100%; }
+ .hub-welcome { padding: 20px; }
+ .hub-welcome-mark { display: none; }
+ .hub-feature-grid, .hub-task-list { grid-template-columns: minmax(0, 1fr); }
+ .hub-card { padding: 17px; }
+ .hub-metric { padding: 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .hub-plan-progress span { transition: none; } }
