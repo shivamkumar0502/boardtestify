@@ -98,17 +98,6 @@ function App() {
         .catch(() => {});
     document.documentElement.lang = next;
   }
-  if (!ready)
-    return (
-      <div className="loading">
-        <span className="logo-icon">
-          {tr("B")}
-          <span>{tr("\u2713")}</span>
-        </span>
-        {tr(" ")}
-        {tr("Opening BoardTestify\u2026")}
-      </div>
-    );
   return (
     <Context.Provider
       value={{
@@ -127,9 +116,9 @@ function App() {
           <Route path="/phone-login" element={<PhoneLogin />} />
           <Route path="/reset-password" element={<Reset />} />
           <Route path="/forgot-password" element={<Reset forgot />} />
-          <Route path="/app/*" element={user ? <Shell /> : <Auth />} />
-          <Route path="/exam/:id" element={user ? <Exam /> : <Auth />} />
-          <Route path="/result/:id" element={user ? <Result /> : <Auth />} />
+          <Route path="/app/*" element={!ready ? <StartupLoading /> : user ? <Shell /> : <Auth />} />
+          <Route path="/exam/:id" element={!ready ? <StartupLoading /> : user ? <Exam /> : <Auth />} />
+          <Route path="/result/:id" element={!ready ? <StartupLoading /> : user ? <Result /> : <Auth />} />
           <Route
             path="*"
             element={
@@ -143,6 +132,19 @@ function App() {
       </BrowserRouter>
       </Suspense>
     </Context.Provider>
+  );
+}
+function StartupLoading() {
+  useLanguage();
+  return (
+    <div className="loading" role="status">
+      <span className="logo-icon">
+        {tr("B")}
+        <span>{tr("\\u2713")}</span>
+      </span>
+      {tr(" ")}
+      {tr("Opening BoardTestify\\u2026")}
+    </div>
   );
 }
 function Logo() {
