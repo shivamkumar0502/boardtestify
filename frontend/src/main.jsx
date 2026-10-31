@@ -468,12 +468,22 @@ function Landing() {
           </div>
         </section>
       </main>
-      <footer>
-        <Logo />
-        <span>{tr("Practice Smart. Prepare Better. Score Higher.")}</span>
-        <small>
-          {tr("Independent platform \xB7 Not affiliated with BSEB")}
-        </small>
+      <footer className="site-footer">
+        <div className="footer-brand">
+          <Logo />
+          <p>{tr("Practice Smart. Prepare Better. Score Higher.")}</p>
+          <small>{tr("Independent platform · Not affiliated with BSEB")}</small>
+        </div>
+        <div className="footer-contact">
+          <h3>{tr("Contact")}</h3>
+          <a href="mailto:shivamkumartek123@gmail.com">shivamkumartek123@gmail.com</a>
+          <a href="tel:+919955950777">+91 99559 50777</a>
+        </div>
+        <div className="footer-social">
+          <h3>{tr("Connect")}</h3>
+          <a href="https://www.linkedin.com/in/shivam-kumar-b8320437b/" target="_blank" rel="noreferrer">LinkedIn</a>
+          <a href="https://www.instagram.com/0xshivam7/" target="_blank" rel="noreferrer">Instagram</a>
+        </div>
       </footer>
     </>
   );
