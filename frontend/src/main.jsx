@@ -140,10 +140,10 @@ function StartupLoading() {
     <div className="loading" role="status">
       <span className="logo-icon">
         {tr("B")}
-        <span>{tr("\\u2713")}</span>
+        <span>{tr("\u2713")}</span>
       </span>
       {tr(" ")}
-      {tr("Opening BoardTestify\\u2026")}
+      {tr("Opening BoardTestify\u2026")}
     </div>
   );
 }
