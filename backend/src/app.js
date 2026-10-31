@@ -52,8 +52,28 @@ app.use(
 );
 app.use(cors({ origin: env.WEB_ORIGIN, credentials: true }));
 app.use((req, res, next) => {
-  res.setHeader("X-Request-ID", randomUUID());
+  const requestId = randomUUID();
+  const startedAt = process.hrtime.bigint();
+  res.setHeader("X-Request-ID", requestId);
   if (req.path.startsWith("/api/")) res.setHeader("Cache-Control", "no-store");
+  res.once("finish", () => {
+    const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
+    if (durationMs >= 500 || res.statusCode >= 500) {
+      const route = req.route?.path
+        ? `${req.baseUrl}${req.route.path}`
+        : req.path;
+      logger.warn(
+        {
+          requestId,
+          method: req.method,
+          route,
+          statusCode: res.statusCode,
+          durationMs: Math.round(durationMs * 10) / 10,
+        },
+        "Slow or failed request",
+      );
+    }
+  });
   next();
 });
 app.post(
